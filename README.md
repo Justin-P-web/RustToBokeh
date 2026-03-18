@@ -23,26 +23,36 @@ The Python script and HTML template are embedded into the binary at compile time
 ## Prerequisites
 
 - Rust toolchain (1.75+)
-- Python 3.8+ with the following packages:
+- Python 3.10+
+
+## Python Environment Setup
+
+Create a local virtual environment and install the pinned dependencies (do this once after cloning):
 
 ```bash
-pip install bokeh jinja2
+python3 -m venv .venv
+source .venv/bin/activate        # Linux/macOS
+# .venv\Scripts\activate         # Windows
+pip install -r requirements.txt
 ```
 
-PyO3 links against the Python interpreter at build time. Make sure the `python3` / `python` on your `PATH` is the one that has the packages installed, or set `PYO3_PYTHON` to point at a specific interpreter:
+PyO3 links against the Python interpreter at build time. Export this before building so it uses the venv Python with the installed packages:
 
 ```bash
-export PYO3_PYTHON=$(which python3)
+export PYO3_PYTHON=$(pwd)/.venv/bin/python    # Linux/macOS
+# $env:PYO3_PYTHON="$PWD\.venv\Scripts\python.exe"   # Windows PowerShell
 ```
 
 ## Building & Running
+
+With `PYO3_PYTHON` exported (see above), build and run:
 
 ```bash
 cargo build --release
 cargo run --release
 ```
 
-On success the chart is written to **`output.html`** in the current directory. Open it in any browser to explore the interactive chart.
+On success the chart is written to **`output.html`** in the current directory. Open it in any browser to explore the interactive charts.
 
 ## Project Structure
 
@@ -54,6 +64,7 @@ RustToBokeh/
 │   └── render.py         # Python script executed via PyO3
 ├── templates/
 │   └── chart.html        # Jinja2 HTML template
+├── requirements.txt      # Pinned Python dependencies
 ├── output.html           # Sample generated output (committed for preview)
 ├── Cargo.toml
 └── Cargo.lock
@@ -64,9 +75,10 @@ RustToBokeh/
 | Crate / Package | Version | Purpose |
 |---|---|---|
 | [pyo3](https://crates.io/crates/pyo3) | 0.23 | Rust ↔ Python FFI |
-| [polars](https://crates.io/crates/polars) | 0.53 | DataFrame construction |
-| [bokeh](https://pypi.org/project/bokeh/) | latest | Interactive chart rendering |
-| [jinja2](https://pypi.org/project/Jinja2/) | latest | HTML templating |
+| [polars](https://crates.io/crates/polars) | 0.53 | DataFrame construction (Rust) |
+| [bokeh](https://pypi.org/project/bokeh/) | see requirements.txt | Interactive chart rendering |
+| [jinja2](https://pypi.org/project/Jinja2/) | see requirements.txt | HTML templating |
+| [polars](https://pypi.org/project/polars/) | see requirements.txt | Arrow IPC deserialization (Python) |
 
 ## License
 

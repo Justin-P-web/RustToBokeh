@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Monthly Revenue vs Expenses</title>
+    
+    <script src="https://cdn.bokeh.org/bokeh/release/bokeh-3.9.0.min.js"></script>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+            max-width: 1000px;
+            margin: 40px auto;
+            padding: 0 20px;
+            background: #f8f9fa;
+            color: #333;
+        }
+        h1 {
+            color: #2c3e50;
+            border-bottom: 3px solid #4C72B0;
+            padding-bottom: 12px;
+            margin-bottom: 8px;
+        }
+        .subtitle {
+            color: #666;
+            margin-bottom: 24px;
+            font-size: 0.95em;
+        }
+        .chart-container {
+            background: white;
+            border-radius: 8px;
+            padding: 20px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+        footer {
+            margin-top: 24px;
+            color: #999;
+            font-size: 0.82em;
+            text-align: center;
+        }
+        .tech-badge {
+            display: inline-block;
+            background: #e8eef7;
+            color: #4C72B0;
+            border-radius: 4px;
+            padding: 2px 8px;
+            margin: 0 2px;
+            font-weight: 600;
+            font-size: 0.88em;
+        }
+    </style>
+</head>
+<body>
+    <h1>Monthly Revenue vs Expenses</h1>
+    <p class="subtitle">
+        Data generated in Rust with
+        <span class="tech-badge">Polars</span>,
+        visualized with
+        <span class="tech-badge">Bokeh</span>
+        via
+        <span class="tech-badge">PyO3</span>,
+        rendered with
+        <span class="tech-badge">Jinja2</span>
+    </p>
+    <div class="chart-container">
+        <div id="a1650247-6398-4048-8ad7-9ab70aab1e74" data-root-id="p1010" style="display: contents;"></div>
+    </div>
+    <script>
+(function() {
+  const fn = function() {
+    Bokeh.safely(function() {
+      (function(root) {
+        function embed_document(root) {
+        const docs_json = '{"2af4dca9-f27e-4396-9556-b2d18dbb7af7":{"version":"3.9.0","title":"Bokeh Application","config":{"type":"object","name":"DocumentConfig","id":"p1055","attributes":{"notifications":{"type":"object","name":"Notifications","id":"p1056"}}},"roots":[{"type":"object","name":"Figure","id":"p1010","attributes":{"width":900,"height":450,"x_range":{"type":"object","name":"FactorRange","id":"p1009","attributes":{"factors":[["Jan","Revenue"],["Jan","Expenses"],["Feb","Revenue"],["Feb","Expenses"],["Mar","Revenue"],["Mar","Expenses"],["Apr","Revenue"],["Apr","Expenses"],["May","Revenue"],["May","Expenses"],["Jun","Revenue"],["Jun","Expenses"],["Jul","Revenue"],["Jul","Expenses"],["Aug","Revenue"],["Aug","Expenses"],["Sep","Revenue"],["Sep","Expenses"],["Oct","Revenue"],["Oct","Expenses"],["Nov","Revenue"],["Nov","Expenses"],["Dec","Revenue"],["Dec","Expenses"]],"range_padding":0.1}},"y_range":{"type":"object","name":"DataRange1d","id":"p1012"},"x_scale":{"type":"object","name":"CategoricalScale","id":"p1020"},"y_scale":{"type":"object","name":"LinearScale","id":"p1021"},"title":{"type":"object","name":"Title","id":"p1013","attributes":{"text":"Monthly Revenue vs Expenses (2024)"}},"renderers":[{"type":"object","name":"GlyphRenderer","id":"p1048","attributes":{"data_source":{"type":"object","name":"ColumnDataSource","id":"p1006","attributes":{"selected":{"type":"object","name":"Selection","id":"p1007","attributes":{"indices":[],"line_indices":[]}},"selection_policy":{"type":"object","name":"UnionRenderers","id":"p1008"},"data":{"type":"map","entries":[["x",[["Jan","Revenue"],["Jan","Expenses"],["Feb","Revenue"],["Feb","Expenses"],["Mar","Revenue"],["Mar","Expenses"],["Apr","Revenue"],["Apr","Expenses"],["May","Revenue"],["May","Expenses"],["Jun","Revenue"],["Jun","Expenses"],["Jul","Revenue"],["Jul","Expenses"],["Aug","Revenue"],["Aug","Expenses"],["Sep","Revenue"],["Sep","Expenses"],["Oct","Revenue"],["Oct","Expenses"],["Nov","Revenue"],["Nov","Expenses"],["Dec","Revenue"],["Dec","Expenses"]]],["counts",[120.5,95.0,135.2,102.5,148.7,110.3,162.3,118.7,175.0,125.2,190.8,132.8,205.1,140.1,198.4,136.5,210.7,145.2,225.3,152.7,240.6,160.3,280.9,175.5]]]}}},"view":{"type":"object","name":"CDSView","id":"p1049","attributes":{"filter":{"type":"object","name":"AllIndices","id":"p1050"}}},"glyph":{"type":"object","name":"VBar","id":"p1045","attributes":{"x":{"type":"field","field":"x"},"width":{"type":"value","value":0.9},"top":{"type":"field","field":"counts"},"line_color":{"type":"value","value":"white"},"fill_color":{"type":"field","field":"x","transform":{"type":"object","name":"CategoricalColorMapper","id":"p1044","attributes":{"palette":["#4C72B0","#DD8452"],"factors":["Revenue","Expenses"],"start":1,"end":2}}}}},"nonselection_glyph":{"type":"object","name":"VBar","id":"p1046","attributes":{"x":{"type":"field","field":"x"},"width":{"type":"value","value":0.9},"top":{"type":"field","field":"counts"},"line_color":{"type":"value","value":"white"},"line_alpha":{"type":"value","value":0.1},"fill_color":{"type":"field","field":"x","transform":{"id":"p1044"}},"fill_alpha":{"type":"value","value":0.1},"hatch_alpha":{"type":"value","value":0.1}}},"muted_glyph":{"type":"object","name":"VBar","id":"p1047","attributes":{"x":{"type":"field","field":"x"},"width":{"type":"value","value":0.9},"top":{"type":"field","field":"counts"},"line_color":{"type":"value","value":"white"},"line_alpha":{"type":"value","value":0.2},"fill_color":{"type":"field","field":"x","transform":{"id":"p1044"}},"fill_alpha":{"type":"value","value":0.2},"hatch_alpha":{"type":"value","value":0.2}}}}}],"toolbar":{"type":"object","name":"Toolbar","id":"p1019","attributes":{"tools":[{"type":"object","name":"PanTool","id":"p1032"},{"type":"object","name":"WheelZoomTool","id":"p1033","attributes":{"renderers":"auto"}},{"type":"object","name":"BoxZoomTool","id":"p1034","attributes":{"dimensions":"both","overlay":{"type":"object","name":"BoxAnnotation","id":"p1035","attributes":{"syncable":false,"line_color":"black","line_alpha":1.0,"line_width":2,"line_dash":[4,4],"fill_color":"lightgrey","fill_alpha":0.5,"level":"overlay","visible":false,"left":{"type":"number","value":"nan"},"right":{"type":"number","value":"nan"},"top":{"type":"number","value":"nan"},"bottom":{"type":"number","value":"nan"},"left_units":"canvas","right_units":"canvas","top_units":"canvas","bottom_units":"canvas","handles":{"type":"object","name":"BoxInteractionHandles","id":"p1041","attributes":{"all":{"type":"object","name":"AreaVisuals","id":"p1040","attributes":{"fill_color":"white","hover_fill_color":"lightgray"}}}}}}}},{"type":"object","name":"ResetTool","id":"p1042"},{"type":"object","name":"SaveTool","id":"p1043"}]}},"toolbar_location":"above","left":[{"type":"object","name":"LinearAxis","id":"p1027","attributes":{"ticker":{"type":"object","name":"BasicTicker","id":"p1028","attributes":{"mantissas":[1,2,5]}},"formatter":{"type":"object","name":"BasicTickFormatter","id":"p1029"},"axis_label":"Amount (USD thousands)","major_label_policy":{"type":"object","name":"AllLabels","id":"p1030"}}}],"below":[{"type":"object","name":"CategoricalAxis","id":"p1022","attributes":{"ticker":{"type":"object","name":"CategoricalTicker","id":"p1023"},"formatter":{"type":"object","name":"CategoricalTickFormatter","id":"p1024"},"major_label_orientation":1.0,"major_label_policy":{"type":"object","name":"AllLabels","id":"p1025"},"group_label_orientation":0.5}}],"center":[{"type":"object","name":"Grid","id":"p1026","attributes":{"axis":{"id":"p1022"},"grid_line_color":null}},{"type":"object","name":"Grid","id":"p1031","attributes":{"dimension":1,"axis":{"id":"p1027"}}},{"type":"object","name":"Legend","id":"p1051","attributes":{"location":"top_left","orientation":"horizontal","items":[{"type":"object","name":"LegendItem","id":"p1053","attributes":{"label":{"type":"value","value":"Revenue"},"renderers":[{"id":"p1048"}]}},{"type":"object","name":"LegendItem","id":"p1054","attributes":{"label":{"type":"value","value":"Expenses"},"renderers":[{"id":"p1048"}]}}]}}]}}]}}';
+        const render_items = [{"docid":"2af4dca9-f27e-4396-9556-b2d18dbb7af7","roots":{"p1010":"a1650247-6398-4048-8ad7-9ab70aab1e74"},"root_ids":["p1010"]}];
+        root.Bokeh.embed.embed_items(docs_json, render_items);
+        }
+        if (root.Bokeh !== undefined) {
+          embed_document(root);
+        } else {
+          let attempts = 0;
+          const timer = setInterval(function(root) {
+            if (root.Bokeh !== undefined) {
+              clearInterval(timer);
+              embed_document(root);
+            } else {
+              attempts++;
+              if (attempts > 100) {
+                clearInterval(timer);
+                console.log("Bokeh: ERROR: Unable to run BokehJS code because BokehJS library is missing");
+              }
+            }
+          }, 10, root)
+        }
+      })(window);
+    });
+  };
+  if (document.readyState != "loading") fn();
+  else document.addEventListener("DOMContentLoaded", fn);
+})();
+</script>
+
+    <footer>Generated by RustToBokeh &mdash; Rust + Polars + PyO3 + Bokeh + Jinja2</footer>
+</body>
+</html>

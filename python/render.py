@@ -316,8 +316,8 @@ for page in pages:
             const lo = Math.round(cb_obj.value[0]);
             const hi = Math.round(cb_obj.value[1]);
             const sliced = {{}};
-            for (const key of Object.keys(full)) {{
-                sliced[key] = full[key].slice(lo, hi + 1);
+            for (const [key, val] of full) {{
+                sliced[key] = val.slice(lo, hi + 1);
             }}
             source.data = sliced;
 {update_factors}

@@ -80,6 +80,8 @@ fn serialize_df(df: &mut DataFrame) -> Vec<u8> {
 enum ChartType {
     GroupedBar,
     LineMulti,
+    HBar,
+    ScatterPlot,
 }
 
 impl ChartType {
@@ -87,6 +89,8 @@ impl ChartType {
         match self {
             ChartType::GroupedBar => "grouped_bar",
             ChartType::LineMulti => "line_multi",
+            ChartType::HBar => "hbar",
+            ChartType::ScatterPlot => "scatter_plot",
         }
     }
 }
@@ -99,6 +103,9 @@ struct ChartSpec {
     chart_type: ChartType,
     /// Must match a key in the `frames` dict passed to Python.
     source_key: String,
+    /// For GroupedBar/LineMulti: categorical x column.
+    /// For HBar: category column (rendered on y-axis).
+    /// For ScatterPlot: numeric x column.
     x_col: String,
     /// Column names for the value series (wide-format DataFrame).
     value_cols: Vec<String>,
@@ -111,6 +118,19 @@ struct ChartSpec {
     /// specified rows are rendered while the full CDS remains shared.
     indices: Option<Vec<usize>>,
 }
+
+/// A page groups chart specs that share a single HTML output file.
+/// Only the frames referenced by that page's specs are embedded in its output.
+struct Page {
+    title: String,
+    /// Short label shown in the nav bar on every page.
+    nav_label: String,
+    /// Output filename without extension; page writes to `output_dir/slug.html`.
+    slug: String,
+    specs: Vec<ChartSpec>,
+}
+
+// ── DataFrames ───────────────────────────────────────────────────────────────
 
 /// Wide format: one row per month, one column per series.
 fn build_monthly_dataframe() -> DataFrame {
@@ -133,60 +153,139 @@ fn build_quarterly_dataframe() -> DataFrame {
     .expect("Failed to build quarterly DataFrame")
 }
 
+/// Annual product totals (sum across all quarters).
+fn build_product_totals_dataframe() -> DataFrame {
+    df![
+        "product" => ["Product A", "Product B", "Product C"],
+        "total"   => [1641.5, 1171.7, 741.7f64],
+    ]
+    .expect("Failed to build product totals DataFrame")
+}
+
+/// Annual category totals derived from the monthly data.
+fn build_annual_summary_dataframe() -> DataFrame {
+    df![
+        "category" => ["Revenue", "Expenses", "Profit"],
+        "total"    => [2293.5, 1594.8, 698.7f64],
+    ]
+    .expect("Failed to build annual summary DataFrame")
+}
+
 fn main() -> PyResult<()> {
     configure_vendored_python();
 
     let mut monthly_df = build_monthly_dataframe();
     let mut quarterly_df = build_quarterly_dataframe();
+    let mut product_totals_df = build_product_totals_dataframe();
+    let mut annual_summary_df = build_annual_summary_dataframe();
 
     println!("Monthly DataFrame:\n{}", monthly_df);
     println!("Quarterly DataFrame:\n{}", quarterly_df);
 
-    // One entry per unique dataset; key becomes the source_key referenced by specs.
+    // All frames across all pages. Each page only embeds the subset it references.
+    // `monthly_corr` is a separate key from `monthly` so page 3's HTML is
+    // self-contained and doesn't carry page 1's CDS data.
     let frame_data: Vec<(&str, Vec<u8>)> = vec![
-        ("monthly", serialize_df(&mut monthly_df)),
-        ("quarterly", serialize_df(&mut quarterly_df)),
+        ("monthly",        serialize_df(&mut monthly_df)),
+        ("quarterly",      serialize_df(&mut quarterly_df)),
+        ("product_totals", serialize_df(&mut product_totals_df)),
+        ("monthly_corr",   serialize_df(&mut monthly_df)),
+        ("annual_summary", serialize_df(&mut annual_summary_df)),
     ];
 
-    let specs: Vec<ChartSpec> = vec![
-        ChartSpec {
-            title: "Monthly Revenue vs Expenses (2024)".to_string(),
-            chart_type: ChartType::GroupedBar,
-            source_key: "monthly".to_string(),
-            x_col: "month".to_string(),
-            value_cols: vec!["Revenue".to_string(), "Expenses".to_string()],
-            y_label: "Amount (USD thousands)".to_string(),
-            width: 900,
-            height: 400,
-            indices: None,
-        },
-        // Shares the same CDS as the bar chart; IndexFilter restricts this
-        // panel to H1 (Jan–Jun) while the linked source remains complete.
-        ChartSpec {
-            title: "H1 Monthly Trends (Jan–Jun)".to_string(),
-            chart_type: ChartType::LineMulti,
-            source_key: "monthly".to_string(),
-            x_col: "month".to_string(),
-            value_cols: vec!["Revenue".to_string(), "Expenses".to_string()],
-            y_label: "Amount (USD thousands)".to_string(),
-            width: 500,
-            height: 350,
-            indices: Some(vec![0, 1, 2, 3, 4, 5]),
-        },
-        ChartSpec {
-            title: "Quarterly Product Revenue".to_string(),
-            chart_type: ChartType::GroupedBar,
-            source_key: "quarterly".to_string(),
-            x_col: "quarter".to_string(),
-            value_cols: vec![
-                "Product A".to_string(),
-                "Product B".to_string(),
-                "Product C".to_string(),
+    let pages: Vec<Page> = vec![
+        Page {
+            title: "Monthly Performance".to_string(),
+            nav_label: "Monthly".to_string(),
+            slug: "monthly".to_string(),
+            specs: vec![
+                ChartSpec {
+                    title: "Monthly Revenue vs Expenses (2024)".to_string(),
+                    chart_type: ChartType::GroupedBar,
+                    source_key: "monthly".to_string(),
+                    x_col: "month".to_string(),
+                    value_cols: vec!["Revenue".to_string(), "Expenses".to_string()],
+                    y_label: "Amount (USD thousands)".to_string(),
+                    width: 900,
+                    height: 400,
+                    indices: None,
+                },
+                // Shares the same CDS as the bar chart; IndexFilter restricts
+                // this panel to H1 while the linked source stays complete.
+                ChartSpec {
+                    title: "H1 Monthly Trends (Jan\u{2013}Jun)".to_string(),
+                    chart_type: ChartType::LineMulti,
+                    source_key: "monthly".to_string(),
+                    x_col: "month".to_string(),
+                    value_cols: vec!["Revenue".to_string(), "Expenses".to_string()],
+                    y_label: "Amount (USD thousands)".to_string(),
+                    width: 500,
+                    height: 350,
+                    indices: Some(vec![0, 1, 2, 3, 4, 5]),
+                },
             ],
-            y_label: "Revenue (USD thousands)".to_string(),
-            width: 500,
-            height: 400,
-            indices: None,
+        },
+        Page {
+            title: "Quarterly Breakdown".to_string(),
+            nav_label: "Quarterly".to_string(),
+            slug: "quarterly".to_string(),
+            specs: vec![
+                ChartSpec {
+                    title: "Quarterly Product Revenue".to_string(),
+                    chart_type: ChartType::GroupedBar,
+                    source_key: "quarterly".to_string(),
+                    x_col: "quarter".to_string(),
+                    value_cols: vec![
+                        "Product A".to_string(),
+                        "Product B".to_string(),
+                        "Product C".to_string(),
+                    ],
+                    y_label: "Revenue (USD thousands)".to_string(),
+                    width: 900,
+                    height: 400,
+                    indices: None,
+                },
+                ChartSpec {
+                    title: "Annual Product Revenue Ranking".to_string(),
+                    chart_type: ChartType::HBar,
+                    source_key: "product_totals".to_string(),
+                    x_col: "product".to_string(),
+                    value_cols: vec!["total".to_string()],
+                    y_label: "Total Revenue (USD thousands)".to_string(),
+                    width: 500,
+                    height: 300,
+                    indices: None,
+                },
+            ],
+        },
+        Page {
+            title: "Revenue Correlation".to_string(),
+            nav_label: "Correlation".to_string(),
+            slug: "correlation".to_string(),
+            specs: vec![
+                ChartSpec {
+                    title: "Revenue vs Expenses by Month".to_string(),
+                    chart_type: ChartType::ScatterPlot,
+                    source_key: "monthly_corr".to_string(),
+                    x_col: "Revenue".to_string(),
+                    value_cols: vec!["Expenses".to_string()],
+                    y_label: "Expenses (USD thousands)".to_string(),
+                    width: 500,
+                    height: 400,
+                    indices: None,
+                },
+                ChartSpec {
+                    title: "2024 Annual Totals".to_string(),
+                    chart_type: ChartType::HBar,
+                    source_key: "annual_summary".to_string(),
+                    x_col: "category".to_string(),
+                    value_cols: vec!["total".to_string()],
+                    y_label: "Total (USD thousands)".to_string(),
+                    width: 500,
+                    height: 300,
+                    indices: None,
+                },
+            ],
         },
     ];
 
@@ -194,53 +293,63 @@ fn main() -> PyResult<()> {
     let html_template = include_str!("../templates/chart.html");
 
     Python::with_gil(|py| {
-        // frames dict: source_key -> Arrow IPC bytes
+        // frames dict: source_key -> Arrow IPC bytes (all pages)
         let frames = PyDict::new(py);
         for (key, bytes) in &frame_data {
             frames.set_item(*key, PyBytes::new(py, bytes))?;
         }
 
-        // chart_specs list: one dict per panel
-        let chart_specs = PyList::empty(py);
-        for spec in &specs {
-            let d = PyDict::new(py);
-            d.set_item("title", &spec.title)?;
-            d.set_item("chart_type", spec.chart_type.as_str())?;
-            d.set_item("source_key", &spec.source_key)?;
-            d.set_item("x_col", &spec.x_col)?;
-            let value_cols = PyList::empty(py);
-            for col in &spec.value_cols {
-                value_cols.append(col.as_str())?;
-            }
-            d.set_item("value_cols", value_cols)?;
-            d.set_item("y_label", &spec.y_label)?;
-            d.set_item("width", spec.width)?;
-            d.set_item("height", spec.height)?;
-            match &spec.indices {
-                Some(idx) => {
-                    let py_idx = PyList::empty(py);
-                    for &i in idx {
-                        py_idx.append(i)?;
-                    }
-                    d.set_item("indices", py_idx)?;
+        // pages list: one dict per page, each containing its own specs list
+        let py_pages = PyList::empty(py);
+        for page in &pages {
+            let page_dict = PyDict::new(py);
+            page_dict.set_item("title", &page.title)?;
+            page_dict.set_item("nav_label", &page.nav_label)?;
+            page_dict.set_item("slug", &page.slug)?;
+
+            let page_specs = PyList::empty(py);
+            for spec in &page.specs {
+                let d = PyDict::new(py);
+                d.set_item("title", &spec.title)?;
+                d.set_item("chart_type", spec.chart_type.as_str())?;
+                d.set_item("source_key", &spec.source_key)?;
+                d.set_item("x_col", &spec.x_col)?;
+                let value_cols = PyList::empty(py);
+                for col in &spec.value_cols {
+                    value_cols.append(col.as_str())?;
                 }
-                None => d.set_item("indices", py.None())?,
+                d.set_item("value_cols", value_cols)?;
+                d.set_item("y_label", &spec.y_label)?;
+                d.set_item("width", spec.width)?;
+                d.set_item("height", spec.height)?;
+                match &spec.indices {
+                    Some(idx) => {
+                        let py_idx = PyList::empty(py);
+                        for &i in idx {
+                            py_idx.append(i)?;
+                        }
+                        d.set_item("indices", py_idx)?;
+                    }
+                    None => d.set_item("indices", py.None())?,
+                }
+                page_specs.append(d)?;
             }
-            chart_specs.append(d)?;
+            page_dict.set_item("specs", page_specs)?;
+            py_pages.append(page_dict)?;
         }
 
         let locals = PyDict::new(py);
         locals.set_item("frames", frames)?;
-        locals.set_item("chart_specs", chart_specs)?;
+        locals.set_item("pages", py_pages)?;
         locals.set_item("html_template", html_template)?;
-        locals.set_item("output_path", "output.html")?;
+        locals.set_item("output_dir", "output")?;
 
         let code = CString::new(python_script).expect("Python script contains null byte");
         // Pass locals as both globals and locals so list comprehensions can see
         // script-defined variables (Python 3 comprehensions have their own scope).
         py.run(code.as_c_str(), Some(&locals), Some(&locals))?;
 
-        println!("Charts saved to output.html");
+        println!("Pages written to output/");
         Ok(())
     })
 }

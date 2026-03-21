@@ -1,3 +1,5 @@
+use crate::error::ChartError;
+
 // ── Chart configuration structs ──────────────────────────────────────────────
 
 pub struct GroupedBarConfig {
@@ -31,13 +33,13 @@ impl GroupedBarConfigBuilder {
     pub fn value(mut self, col: &str) -> Self { self.value_col = Some(col.into()); self }
     pub fn y_label(mut self, label: &str) -> Self { self.y_label = Some(label.into()); self }
 
-    pub fn build(self) -> GroupedBarConfig {
-        GroupedBarConfig {
-            x_col: self.x_col.expect("x_col required"),
-            group_col: self.group_col.expect("group_col required"),
-            value_col: self.value_col.expect("value_col required"),
-            y_label: self.y_label.expect("y_label required"),
-        }
+    pub fn build(self) -> Result<GroupedBarConfig, ChartError> {
+        Ok(GroupedBarConfig {
+            x_col: self.x_col.ok_or(ChartError::MissingField("x_col"))?,
+            group_col: self.group_col.ok_or(ChartError::MissingField("group_col"))?,
+            value_col: self.value_col.ok_or(ChartError::MissingField("value_col"))?,
+            y_label: self.y_label.ok_or(ChartError::MissingField("y_label"))?,
+        })
     }
 }
 
@@ -73,12 +75,12 @@ impl LineConfigBuilder {
     }
     pub fn y_label(mut self, label: &str) -> Self { self.y_label = Some(label.into()); self }
 
-    pub fn build(self) -> LineConfig {
-        LineConfig {
-            x_col: self.x_col.expect("x_col required"),
-            y_cols: self.y_cols.expect("y_cols required"),
-            y_label: self.y_label.expect("y_label required"),
-        }
+    pub fn build(self) -> Result<LineConfig, ChartError> {
+        Ok(LineConfig {
+            x_col: self.x_col.ok_or(ChartError::MissingField("x_col"))?,
+            y_cols: self.y_cols.ok_or(ChartError::MissingField("y_cols"))?,
+            y_label: self.y_label.ok_or(ChartError::MissingField("y_label"))?,
+        })
     }
 }
 
@@ -111,12 +113,12 @@ impl HBarConfigBuilder {
     pub fn value(mut self, col: &str) -> Self { self.value_col = Some(col.into()); self }
     pub fn x_label(mut self, label: &str) -> Self { self.x_label = Some(label.into()); self }
 
-    pub fn build(self) -> HBarConfig {
-        HBarConfig {
-            category_col: self.category_col.expect("category_col required"),
-            value_col: self.value_col.expect("value_col required"),
-            x_label: self.x_label.expect("x_label required"),
-        }
+    pub fn build(self) -> Result<HBarConfig, ChartError> {
+        Ok(HBarConfig {
+            category_col: self.category_col.ok_or(ChartError::MissingField("category_col"))?,
+            value_col: self.value_col.ok_or(ChartError::MissingField("value_col"))?,
+            x_label: self.x_label.ok_or(ChartError::MissingField("x_label"))?,
+        })
     }
 }
 
@@ -153,13 +155,13 @@ impl ScatterConfigBuilder {
     pub fn x_label(mut self, label: &str) -> Self { self.x_label = Some(label.into()); self }
     pub fn y_label(mut self, label: &str) -> Self { self.y_label = Some(label.into()); self }
 
-    pub fn build(self) -> ScatterConfig {
-        ScatterConfig {
-            x_col: self.x_col.expect("x_col required"),
-            y_col: self.y_col.expect("y_col required"),
-            x_label: self.x_label.expect("x_label required"),
-            y_label: self.y_label.expect("y_label required"),
-        }
+    pub fn build(self) -> Result<ScatterConfig, ChartError> {
+        Ok(ScatterConfig {
+            x_col: self.x_col.ok_or(ChartError::MissingField("x_col"))?,
+            y_col: self.y_col.ok_or(ChartError::MissingField("y_col"))?,
+            x_label: self.x_label.ok_or(ChartError::MissingField("x_label"))?,
+            y_label: self.y_label.ok_or(ChartError::MissingField("y_label"))?,
+        })
     }
 }
 

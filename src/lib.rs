@@ -1,4 +1,5 @@
 pub mod charts;
+pub mod error;
 pub mod pages;
 mod render;
 
@@ -9,6 +10,7 @@ pub use charts::{
     LineConfig, LineConfigBuilder,
     ScatterConfig, ScatterConfigBuilder,
 };
+pub use error::ChartError;
 pub use pages::{Page, PageBuilder};
 pub use render::render_dashboard;
 
@@ -18,12 +20,10 @@ use polars::prelude::DataFrame;
 use std::io::Cursor;
 
 /// Serialize a Polars DataFrame to Arrow IPC bytes for passing to the renderer.
-pub fn serialize_df(df: &mut DataFrame) -> Vec<u8> {
+pub fn serialize_df(df: &mut DataFrame) -> Result<Vec<u8>, ChartError> {
     let mut buf = Cursor::new(Vec::new());
-    IpcWriter::new(&mut buf)
-        .finish(df)
-        .expect("Failed to serialize DataFrame");
-    buf.into_inner()
+    IpcWriter::new(&mut buf).finish(df)?;
+    Ok(buf.into_inner())
 }
 
 /// High-level dashboard builder that collects DataFrames and pages, then
@@ -37,19 +37,18 @@ pub fn serialize_df(df: &mut DataFrame) -> Vec<u8> {
 ///
 /// let mut df = df!["x" => [1, 2, 3], "y" => [4, 5, 6]].unwrap();
 ///
-/// Dashboard::new()
-///     .add_df("my_data", &mut df)
-///     .add_page(
-///         PageBuilder::new("overview", "Overview", "Overview", 2)
-///             .chart(ChartSpecBuilder::scatter("X vs Y", "my_data",
-///                 ScatterConfig::builder()
-///                     .x("x").y("y").x_label("X").y_label("Y")
-///                     .build()
-///             ).at(0, 0, 2).build())
-///             .build(),
-///     )
-///     .render()
-///     .expect("render failed");
+/// let mut dash = Dashboard::new();
+/// dash.add_df("my_data", &mut df)?;
+/// dash.add_page(
+///     PageBuilder::new("overview", "Overview", "Overview", 2)
+///         .chart(ChartSpecBuilder::scatter("X vs Y", "my_data",
+///             ScatterConfig::builder()
+///                 .x("x").y("y").x_label("X").y_label("Y")
+///                 .build()?
+///         ).at(0, 0, 2).build())
+///         .build(),
+/// );
+/// dash.render()?;
 /// ```
 pub struct Dashboard {
     frames: Vec<(String, Vec<u8>)>,
@@ -73,9 +72,9 @@ impl Dashboard {
     }
 
     /// Add a DataFrame, serializing it to Arrow IPC bytes under the given key.
-    pub fn add_df(&mut self, key: &str, df: &mut DataFrame) -> &mut Self {
-        self.frames.push((key.into(), serialize_df(df)));
-        self
+    pub fn add_df(&mut self, key: &str, df: &mut DataFrame) -> Result<&mut Self, ChartError> {
+        self.frames.push((key.into(), serialize_df(df)?));
+        Ok(self)
     }
 
     /// Add a pre-built Page to the dashboard.
@@ -85,7 +84,7 @@ impl Dashboard {
     }
 
     /// Render all pages to HTML files in the output directory.
-    pub fn render(&self) -> pyo3::PyResult<()> {
+    pub fn render(&self) -> Result<(), ChartError> {
         let refs: Vec<(&str, Vec<u8>)> = self
             .frames
             .iter()

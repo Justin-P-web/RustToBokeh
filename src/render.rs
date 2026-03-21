@@ -1,4 +1,5 @@
 use crate::charts::{ChartConfig, FilterConfig};
+use crate::error::ChartError;
 use crate::pages::Page;
 
 use pyo3::prelude::*;
@@ -14,7 +15,7 @@ pub fn render_dashboard(
     frame_data: &[(&str, Vec<u8>)],
     pages: &[Page],
     output_dir: &str,
-) -> PyResult<()> {
+) -> Result<(), ChartError> {
     crate::configure_vendored_python();
 
     let python_script = include_str!("../python/render.py");
@@ -129,7 +130,7 @@ pub fn render_dashboard(
         locals.set_item("html_template", html_template)?;
         locals.set_item("output_dir", output_dir)?;
 
-        let code = CString::new(python_script).expect("Python script contains null byte");
+        let code = CString::new(python_script).map_err(|_| ChartError::InvalidScript)?;
         py.run(code.as_c_str(), Some(&locals), Some(&locals))?;
 
         println!("Dashboard generated: {} pages in {}/", pages.len(), output_dir);

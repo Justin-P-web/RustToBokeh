@@ -129,89 +129,176 @@ struct Page {
     filters: Vec<FilterSpec>,
 }
 
-// ── Spec builder helpers (keep page definitions concise) ────────────────────
+// ── ChartSpec builder ────────────────────────────────────────────────────────
 
-fn bar(
-    title: &str, key: &str, x: &str, group: &str, val: &str, ylabel: &str,
-    row: usize, col: usize, span: usize,
-) -> ChartSpec {
-    ChartSpec {
-        title: title.into(),
-        chart_type: ChartType::GroupedBar,
-        source_key: key.into(),
-        config: vec![
-            ("x_col".into(), x.into()),
-            ("group_col".into(), group.into()),
-            ("value_col".into(), val.into()),
-            ("y_label".into(), ylabel.into()),
-        ],
-        grid: GridCell { row, col, col_span: span },
-        filtered: false,
+struct ChartSpecBuilder {
+    title: String,
+    chart_type: ChartType,
+    source_key: String,
+    config: Vec<(String, String)>,
+    grid: GridCell,
+    filtered: bool,
+}
+
+impl ChartSpecBuilder {
+    fn bar(title: &str, key: &str, x: &str, group: &str, val: &str, ylabel: &str) -> Self {
+        Self {
+            title: title.into(),
+            chart_type: ChartType::GroupedBar,
+            source_key: key.into(),
+            config: vec![
+                ("x_col".into(), x.into()),
+                ("group_col".into(), group.into()),
+                ("value_col".into(), val.into()),
+                ("y_label".into(), ylabel.into()),
+            ],
+            grid: GridCell { row: 0, col: 0, col_span: 1 },
+            filtered: false,
+        }
+    }
+
+    fn line(title: &str, key: &str, x: &str, ycols: &str, ylabel: &str) -> Self {
+        Self {
+            title: title.into(),
+            chart_type: ChartType::LineMulti,
+            source_key: key.into(),
+            config: vec![
+                ("x_col".into(), x.into()),
+                ("y_cols".into(), ycols.into()),
+                ("y_label".into(), ylabel.into()),
+            ],
+            grid: GridCell { row: 0, col: 0, col_span: 1 },
+            filtered: false,
+        }
+    }
+
+    fn hbar(title: &str, key: &str, cat: &str, val: &str, xlabel: &str) -> Self {
+        Self {
+            title: title.into(),
+            chart_type: ChartType::HBar,
+            source_key: key.into(),
+            config: vec![
+                ("category_col".into(), cat.into()),
+                ("value_col".into(), val.into()),
+                ("x_label".into(), xlabel.into()),
+            ],
+            grid: GridCell { row: 0, col: 0, col_span: 1 },
+            filtered: false,
+        }
+    }
+
+    fn scatter(title: &str, key: &str, x: &str, y: &str, xlabel: &str, ylabel: &str) -> Self {
+        Self {
+            title: title.into(),
+            chart_type: ChartType::ScatterPlot,
+            source_key: key.into(),
+            config: vec![
+                ("x_col".into(), x.into()),
+                ("y_col".into(), y.into()),
+                ("x_label".into(), xlabel.into()),
+                ("y_label".into(), ylabel.into()),
+            ],
+            grid: GridCell { row: 0, col: 0, col_span: 1 },
+            filtered: false,
+        }
+    }
+
+    /// Set the grid position and column span.
+    fn at(mut self, row: usize, col: usize, span: usize) -> Self {
+        self.grid = GridCell { row, col, col_span: span };
+        self
+    }
+
+    /// Mark this chart as filtered (opts into CDSView-based filtering).
+    fn filtered(mut self) -> Self {
+        self.filtered = true;
+        self
+    }
+
+    fn build(self) -> ChartSpec {
+        ChartSpec {
+            title: self.title,
+            chart_type: self.chart_type,
+            source_key: self.source_key,
+            config: self.config,
+            grid: self.grid,
+            filtered: self.filtered,
+        }
     }
 }
 
-fn line(
-    title: &str, key: &str, x: &str, ycols: &str, ylabel: &str,
-    row: usize, col: usize, span: usize,
-) -> ChartSpec {
-    ChartSpec {
-        title: title.into(),
-        chart_type: ChartType::LineMulti,
-        source_key: key.into(),
-        config: vec![
-            ("x_col".into(), x.into()),
-            ("y_cols".into(), ycols.into()),
-            ("y_label".into(), ylabel.into()),
-        ],
-        grid: GridCell { row, col, col_span: span },
-        filtered: false,
+// ── FilterSpec factory methods ───────────────────────────────────────────────
+
+impl FilterSpec {
+    fn range(source_key: &str, column: &str, label: &str, min: f64, max: f64, step: f64) -> Self {
+        Self { source_key: source_key.into(), column: column.into(), label: label.into(),
+               config: FilterConfig::Range { min, max, step } }
+    }
+
+    fn select(source_key: &str, column: &str, label: &str, options: Vec<&'static str>) -> Self {
+        Self { source_key: source_key.into(), column: column.into(), label: label.into(),
+               config: FilterConfig::Select { options } }
+    }
+
+    fn group(source_key: &str, column: &str, label: &str, options: Vec<&'static str>) -> Self {
+        Self { source_key: source_key.into(), column: column.into(), label: label.into(),
+               config: FilterConfig::Group { options } }
+    }
+
+    fn threshold(source_key: &str, column: &str, label: &str, value: f64, above: bool) -> Self {
+        Self { source_key: source_key.into(), column: column.into(), label: label.into(),
+               config: FilterConfig::Threshold { value, above } }
+    }
+
+    fn top_n(source_key: &str, column: &str, label: &str, max_n: usize, descending: bool) -> Self {
+        Self { source_key: source_key.into(), column: column.into(), label: label.into(),
+               config: FilterConfig::TopN { max_n, descending } }
     }
 }
 
-fn hbar_spec(
-    title: &str, key: &str, cat: &str, val: &str, xlabel: &str,
-    row: usize, col: usize, span: usize,
-) -> ChartSpec {
-    ChartSpec {
-        title: title.into(),
-        chart_type: ChartType::HBar,
-        source_key: key.into(),
-        config: vec![
-            ("category_col".into(), cat.into()),
-            ("value_col".into(), val.into()),
-            ("x_label".into(), xlabel.into()),
-        ],
-        grid: GridCell { row, col, col_span: span },
-        filtered: false,
-    }
+// ── Page builder ─────────────────────────────────────────────────────────────
+
+struct PageBuilder {
+    slug: String,
+    title: String,
+    nav_label: String,
+    grid_cols: usize,
+    specs: Vec<ChartSpec>,
+    filters: Vec<FilterSpec>,
 }
 
-fn scatter_spec(
-    title: &str, key: &str, x: &str, y: &str, xlabel: &str, ylabel: &str,
-    row: usize, col: usize, span: usize,
-) -> ChartSpec {
-    ChartSpec {
-        title: title.into(),
-        chart_type: ChartType::ScatterPlot,
-        source_key: key.into(),
-        config: vec![
-            ("x_col".into(), x.into()),
-            ("y_col".into(), y.into()),
-            ("x_label".into(), xlabel.into()),
-            ("y_label".into(), ylabel.into()),
-        ],
-        grid: GridCell { row, col, col_span: span },
-        filtered: false,
+impl PageBuilder {
+    fn new(slug: &str, title: &str, nav_label: &str, grid_cols: usize) -> Self {
+        Self {
+            slug: slug.into(),
+            title: title.into(),
+            nav_label: nav_label.into(),
+            grid_cols,
+            specs: Vec::new(),
+            filters: Vec::new(),
+        }
     }
-}
 
-fn scatter_filtered(
-    title: &str, key: &str, x: &str, y: &str, xlabel: &str, ylabel: &str,
-    row: usize, col: usize, span: usize,
-) -> ChartSpec {
-    let mut spec = scatter_spec(title, key, x, y, xlabel, ylabel, row, col, span);
-    spec.filtered = true;
-    spec
+    fn chart(mut self, spec: ChartSpec) -> Self {
+        self.specs.push(spec);
+        self
+    }
+
+    fn filter(mut self, filter: FilterSpec) -> Self {
+        self.filters.push(filter);
+        self
+    }
+
+    fn build(self) -> Page {
+        Page {
+            slug: self.slug,
+            title: self.title,
+            nav_label: self.nav_label,
+            grid_cols: self.grid_cols,
+            specs: self.specs,
+            filters: self.filters,
+        }
+    }
 }
 
 // ── DataFrame builders ──────────────────────────────────────────────────────
@@ -413,299 +500,149 @@ fn main() -> PyResult<()> {
 
     // ── Define all pages ────────────────────────────────────────────────────
 
+    type C = ChartSpecBuilder;
+
     let pages: Vec<Page> = vec![
         // 1. Executive Summary — Range filter on revenue
-        Page {
-            slug: "executive-summary".into(), title: "Executive Summary".into(),
-            nav_label: "Executive".into(), grid_cols: 2,
-            specs: vec![
-                line("Revenue & Profit Trends", "monthly_trends", "month", "revenue,profit", "USD (k)", 0, 0, 2),
-                hbar_spec("Market Position", "market_share", "company", "share", "Market Share %", 1, 0, 1),
-                bar("Quarterly Products", "quarterly_products", "quarter", "product", "value", "Revenue (k)", 1, 1, 1),
-                scatter_filtered("Revenue vs Profit", "scatter_performance", "revenue", "profit", "Revenue (k)", "Profit (k)", 2, 0, 2),
-            ],
-            filters: vec![
-                FilterSpec {
-                    source_key: "scatter_performance".into(), column: "revenue".into(),
-                    label: "Revenue Range".into(),
-                    config: FilterConfig::Range { min: 40.0, max: 320.0, step: 10.0 },
-                },
-            ],
-        },
+        PageBuilder::new("executive-summary", "Executive Summary", "Executive", 2)
+            .chart(C::line("Revenue & Profit Trends", "monthly_trends", "month", "revenue,profit", "USD (k)").at(0, 0, 2).build())
+            .chart(C::hbar("Market Position", "market_share", "company", "share", "Market Share %").at(1, 0, 1).build())
+            .chart(C::bar("Quarterly Products", "quarterly_products", "quarter", "product", "value", "Revenue (k)").at(1, 1, 1).build())
+            .chart(C::scatter("Revenue vs Profit", "scatter_performance", "revenue", "profit", "Revenue (k)", "Profit (k)").at(2, 0, 2).filtered().build())
+            .filter(FilterSpec::range("scatter_performance", "revenue", "Revenue Range", 40.0, 320.0, 10.0))
+            .build(),
         // 2. Revenue Overview
-        Page {
-            slug: "revenue-overview".into(), title: "Revenue Overview".into(),
-            nav_label: "Revenue".into(), grid_cols: 2,
-            specs: vec![
-                bar("Monthly Revenue vs Expenses", "monthly_revenue", "month", "category", "value", "USD (k)", 0, 0, 2),
-                line("Revenue Trend", "monthly_trends", "month", "revenue,expenses", "USD (k)", 1, 0, 1),
-                line("Profit Margin", "monthly_trends", "month", "margin", "%", 1, 1, 1),
-                bar("Regional Sales", "regional_sales", "region", "channel", "value", "USD (k)", 2, 0, 2),
-            ],
-            filters: vec![],
-        },
+        PageBuilder::new("revenue-overview", "Revenue Overview", "Revenue", 2)
+            .chart(C::bar("Monthly Revenue vs Expenses", "monthly_revenue", "month", "category", "value", "USD (k)").at(0, 0, 2).build())
+            .chart(C::line("Revenue Trend", "monthly_trends", "month", "revenue,expenses", "USD (k)").at(1, 0, 1).build())
+            .chart(C::line("Profit Margin", "monthly_trends", "month", "margin", "%").at(1, 1, 1).build())
+            .chart(C::bar("Regional Sales", "regional_sales", "region", "channel", "value", "USD (k)").at(2, 0, 2).build())
+            .build(),
         // 3. Expense Analysis
-        Page {
-            slug: "expense-analysis".into(), title: "Expense Analysis".into(),
-            nav_label: "Expenses".into(), grid_cols: 2,
-            specs: vec![
-                hbar_spec("Cost Breakdown", "cost_breakdown", "category", "amount", "USD (k)", 0, 0, 1),
-                bar("Budget vs Actual", "budget_vs_actual", "department", "type", "amount", "USD (k)", 0, 1, 1),
-                line("Expense Trends", "monthly_trends", "month", "expenses", "USD (k)", 1, 0, 1),
-                line("Margin Trend", "monthly_trends", "month", "margin", "%", 1, 1, 1),
-            ],
-            filters: vec![],
-        },
+        PageBuilder::new("expense-analysis", "Expense Analysis", "Expenses", 2)
+            .chart(C::hbar("Cost Breakdown", "cost_breakdown", "category", "amount", "USD (k)").at(0, 0, 1).build())
+            .chart(C::bar("Budget vs Actual", "budget_vs_actual", "department", "type", "amount", "USD (k)").at(0, 1, 1).build())
+            .chart(C::line("Expense Trends", "monthly_trends", "month", "expenses", "USD (k)").at(1, 0, 1).build())
+            .chart(C::line("Margin Trend", "monthly_trends", "month", "margin", "%").at(1, 1, 1).build())
+            .build(),
         // 4. Quarterly Performance
-        Page {
-            slug: "quarterly-performance".into(), title: "Quarterly Performance".into(),
-            nav_label: "Quarterly".into(), grid_cols: 2,
-            specs: vec![
-                bar("Product Revenue by Quarter", "quarterly_products", "quarter", "product", "value", "Revenue (k)", 0, 0, 2),
-                line("Quarterly Revenue & Costs", "quarterly_trends", "quarter", "revenue,costs", "USD (k)", 1, 0, 1),
-                line("Quarterly Margin", "quarterly_trends", "quarter", "margin", "%", 1, 1, 1),
-            ],
-            filters: vec![],
-        },
+        PageBuilder::new("quarterly-performance", "Quarterly Performance", "Quarterly", 2)
+            .chart(C::bar("Product Revenue by Quarter", "quarterly_products", "quarter", "product", "value", "Revenue (k)").at(0, 0, 2).build())
+            .chart(C::line("Quarterly Revenue & Costs", "quarterly_trends", "quarter", "revenue,costs", "USD (k)").at(1, 0, 1).build())
+            .chart(C::line("Quarterly Margin", "quarterly_trends", "quarter", "margin", "%").at(1, 1, 1).build())
+            .build(),
         // 5. Product Analysis — GroupFilter (Select) by tier + Range on revenue
-        Page {
-            slug: "product-analysis".into(), title: "Product Analysis".into(),
-            nav_label: "Products".into(), grid_cols: 2,
-            specs: vec![
-                bar("Quarterly Product Revenue", "quarterly_products", "quarter", "product", "value", "Revenue (k)", 0, 0, 2),
-                scatter_filtered("Revenue vs Profit by Team", "scatter_performance", "revenue", "profit", "Revenue (k)", "Profit (k)", 1, 0, 1),
-                scatter_filtered("Revenue vs Satisfaction", "scatter_performance", "revenue", "satisfaction", "Revenue (k)", "Rating", 1, 1, 1),
-            ],
-            filters: vec![
-                FilterSpec {
-                    source_key: "scatter_performance".into(), column: "tier".into(),
-                    label: "Company Tier".into(),
-                    config: FilterConfig::Select { options: vec!["Small", "Medium", "Large"] },
-                },
-                FilterSpec {
-                    source_key: "scatter_performance".into(), column: "revenue".into(),
-                    label: "Revenue Range".into(),
-                    config: FilterConfig::Range { min: 40.0, max: 320.0, step: 10.0 },
-                },
-            ],
-        },
+        PageBuilder::new("product-analysis", "Product Analysis", "Products", 2)
+            .chart(C::bar("Quarterly Product Revenue", "quarterly_products", "quarter", "product", "value", "Revenue (k)").at(0, 0, 2).build())
+            .chart(C::scatter("Revenue vs Profit by Team", "scatter_performance", "revenue", "profit", "Revenue (k)", "Profit (k)").at(1, 0, 1).filtered().build())
+            .chart(C::scatter("Revenue vs Satisfaction", "scatter_performance", "revenue", "satisfaction", "Revenue (k)", "Rating").at(1, 1, 1).filtered().build())
+            .filter(FilterSpec::select("scatter_performance", "tier", "Company Tier", vec!["Small", "Medium", "Large"]))
+            .filter(FilterSpec::range("scatter_performance", "revenue", "Revenue Range", 40.0, 320.0, 10.0))
+            .build(),
         // 6. Regional Breakdown
-        Page {
-            slug: "regional-breakdown".into(), title: "Regional Sales Breakdown".into(),
-            nav_label: "Regions".into(), grid_cols: 2,
-            specs: vec![
-                bar("Sales by Region & Channel", "regional_sales", "region", "channel", "value", "USD (k)", 0, 0, 2),
-                hbar_spec("Market Share", "market_share", "company", "share", "%", 1, 0, 1),
-                scatter_spec("Employees vs Revenue", "scatter_performance", "employees", "revenue", "Team Size", "Revenue (k)", 1, 1, 1),
-            ],
-            filters: vec![],
-        },
+        PageBuilder::new("regional-breakdown", "Regional Sales Breakdown", "Regions", 2)
+            .chart(C::bar("Sales by Region & Channel", "regional_sales", "region", "channel", "value", "USD (k)").at(0, 0, 2).build())
+            .chart(C::hbar("Market Share", "market_share", "company", "share", "%").at(1, 0, 1).build())
+            .chart(C::scatter("Employees vs Revenue", "scatter_performance", "employees", "revenue", "Team Size", "Revenue (k)").at(1, 1, 1).build())
+            .build(),
         // 7. Team Metrics — BooleanFilter (Threshold) on satisfaction
-        Page {
-            slug: "team-metrics".into(), title: "Team & Workforce Metrics".into(),
-            nav_label: "Team".into(), grid_cols: 2,
-            specs: vec![
-                bar("Department Headcount by Year", "dept_headcount", "department", "year", "count", "Employees", 0, 0, 2),
-                scatter_filtered("Employees vs Profit", "scatter_performance", "employees", "profit", "Team Size", "Profit (k)", 1, 0, 1),
-                scatter_filtered("Employees vs Satisfaction", "scatter_performance", "employees", "satisfaction", "Team Size", "Rating", 1, 1, 1),
-            ],
-            filters: vec![
-                FilterSpec {
-                    source_key: "scatter_performance".into(), column: "satisfaction".into(),
-                    label: "High Satisfaction Only (>4.2)".into(),
-                    config: FilterConfig::Threshold { value: 4.2, above: true },
-                },
-            ],
-        },
+        PageBuilder::new("team-metrics", "Team & Workforce Metrics", "Team", 2)
+            .chart(C::bar("Department Headcount by Year", "dept_headcount", "department", "year", "count", "Employees").at(0, 0, 2).build())
+            .chart(C::scatter("Employees vs Profit", "scatter_performance", "employees", "profit", "Team Size", "Profit (k)").at(1, 0, 1).filtered().build())
+            .chart(C::scatter("Employees vs Satisfaction", "scatter_performance", "employees", "satisfaction", "Team Size", "Rating").at(1, 1, 1).filtered().build())
+            .filter(FilterSpec::threshold("scatter_performance", "satisfaction", "High Satisfaction Only (>4.2)", 4.2, true))
+            .build(),
         // 8. Customer Insights — GroupFilter by tier (always one group selected)
-        Page {
-            slug: "customer-insights".into(), title: "Customer Insights".into(),
-            nav_label: "Customers".into(), grid_cols: 2,
-            specs: vec![
-                hbar_spec("Satisfaction Scores", "satisfaction", "category", "score", "Score (1-5)", 0, 0, 2),
-                scatter_filtered("Revenue vs Customer Satisfaction", "scatter_performance", "revenue", "satisfaction", "Revenue (k)", "Rating", 1, 0, 1),
-                scatter_filtered("Profit vs Satisfaction", "scatter_performance", "profit", "satisfaction", "Profit (k)", "Rating", 1, 1, 1),
-            ],
-            filters: vec![
-                FilterSpec {
-                    source_key: "scatter_performance".into(), column: "tier".into(),
-                    label: "Company Tier".into(),
-                    config: FilterConfig::Group { options: vec!["Small", "Medium", "Large"] },
-                },
-            ],
-        },
+        PageBuilder::new("customer-insights", "Customer Insights", "Customers", 2)
+            .chart(C::hbar("Satisfaction Scores", "satisfaction", "category", "score", "Score (1-5)").at(0, 0, 2).build())
+            .chart(C::scatter("Revenue vs Customer Satisfaction", "scatter_performance", "revenue", "satisfaction", "Revenue (k)", "Rating").at(1, 0, 1).filtered().build())
+            .chart(C::scatter("Profit vs Satisfaction", "scatter_performance", "profit", "satisfaction", "Profit (k)", "Rating").at(1, 1, 1).filtered().build())
+            .filter(FilterSpec::group("scatter_performance", "tier", "Company Tier", vec!["Small", "Medium", "Large"]))
+            .build(),
         // 9. Web Analytics
-        Page {
-            slug: "web-analytics".into(), title: "Website Analytics".into(),
-            nav_label: "Web".into(), grid_cols: 2,
-            specs: vec![
-                line("Visitor Traffic", "website_traffic", "month", "visitors", "Visitors", 0, 0, 2),
-                line("Signups Over Time", "website_traffic", "month", "signups", "Signups", 1, 0, 1),
-                line("Conversions Over Time", "website_traffic", "month", "conversions", "Conversions", 1, 1, 1),
-            ],
-            filters: vec![],
-        },
+        PageBuilder::new("web-analytics", "Website Analytics", "Web", 2)
+            .chart(C::line("Visitor Traffic", "website_traffic", "month", "visitors", "Visitors").at(0, 0, 2).build())
+            .chart(C::line("Signups Over Time", "website_traffic", "month", "signups", "Signups").at(1, 0, 1).build())
+            .chart(C::line("Conversions Over Time", "website_traffic", "month", "conversions", "Conversions").at(1, 1, 1).build())
+            .build(),
         // 10. Market Position
-        Page {
-            slug: "market-position".into(), title: "Market Position".into(),
-            nav_label: "Market".into(), grid_cols: 2,
-            specs: vec![
-                hbar_spec("Market Share", "market_share", "company", "share", "Share %", 0, 0, 1),
-                hbar_spec("Project Completion", "project_status", "project", "completion", "% Complete", 0, 1, 1),
-                line("Revenue vs Costs (Quarterly)", "quarterly_trends", "quarter", "revenue,costs", "USD (k)", 1, 0, 2),
-            ],
-            filters: vec![],
-        },
+        PageBuilder::new("market-position", "Market Position", "Market", 2)
+            .chart(C::hbar("Market Share", "market_share", "company", "share", "Share %").at(0, 0, 1).build())
+            .chart(C::hbar("Project Completion", "project_status", "project", "completion", "% Complete").at(0, 1, 1).build())
+            .chart(C::line("Revenue vs Costs (Quarterly)", "quarterly_trends", "quarter", "revenue,costs", "USD (k)").at(1, 0, 2).build())
+            .build(),
         // 11. Budget Management
-        Page {
-            slug: "budget-management".into(), title: "Budget Management".into(),
-            nav_label: "Budget".into(), grid_cols: 2,
-            specs: vec![
-                bar("Budget vs Actual Spending", "budget_vs_actual", "department", "type", "amount", "USD (k)", 0, 0, 2),
-                hbar_spec("Cost Categories", "cost_breakdown", "category", "amount", "USD (k)", 1, 0, 1),
-                line("Revenue Trend", "monthly_trends", "month", "revenue,expenses", "USD (k)", 1, 1, 1),
-            ],
-            filters: vec![],
-        },
+        PageBuilder::new("budget-management", "Budget Management", "Budget", 2)
+            .chart(C::bar("Budget vs Actual Spending", "budget_vs_actual", "department", "type", "amount", "USD (k)").at(0, 0, 2).build())
+            .chart(C::hbar("Cost Categories", "cost_breakdown", "category", "amount", "USD (k)").at(1, 0, 1).build())
+            .chart(C::line("Revenue Trend", "monthly_trends", "month", "revenue,expenses", "USD (k)").at(1, 1, 1).build())
+            .build(),
         // 12. Project Portfolio — IndexFilter (TopN) by revenue
-        Page {
-            slug: "project-portfolio".into(), title: "Project Portfolio".into(),
-            nav_label: "Projects".into(), grid_cols: 2,
-            specs: vec![
-                hbar_spec("Project Completion Status", "project_status", "project", "completion", "% Complete", 0, 0, 2),
-                scatter_filtered("Revenue vs Employees", "scatter_performance", "revenue", "employees", "Revenue (k)", "Team Size", 1, 0, 1),
-                scatter_filtered("Profit vs Employees", "scatter_performance", "profit", "employees", "Profit (k)", "Team Size", 1, 1, 1),
-            ],
-            filters: vec![
-                FilterSpec {
-                    source_key: "scatter_performance".into(), column: "revenue".into(),
-                    label: "Top N by Revenue".into(),
-                    config: FilterConfig::TopN { max_n: 30, descending: true },
-                },
-            ],
-        },
+        PageBuilder::new("project-portfolio", "Project Portfolio", "Projects", 2)
+            .chart(C::hbar("Project Completion Status", "project_status", "project", "completion", "% Complete").at(0, 0, 2).build())
+            .chart(C::scatter("Revenue vs Employees", "scatter_performance", "revenue", "employees", "Revenue (k)", "Team Size").at(1, 0, 1).filtered().build())
+            .chart(C::scatter("Profit vs Employees", "scatter_performance", "profit", "employees", "Profit (k)", "Team Size").at(1, 1, 1).filtered().build())
+            .filter(FilterSpec::top_n("scatter_performance", "revenue", "Top N by Revenue", 30, true))
+            .build(),
         // 13. Growth Indicators
-        Page {
-            slug: "growth-indicators".into(), title: "Growth Indicators".into(),
-            nav_label: "Growth".into(), grid_cols: 2,
-            specs: vec![
-                line("Revenue & Profit Growth", "monthly_trends", "month", "revenue,profit", "USD (k)", 0, 0, 2),
-                line("Visitor Growth", "website_traffic", "month", "visitors,signups", "Count", 1, 0, 1),
-                bar("Quarterly Products", "quarterly_products", "quarter", "product", "value", "Revenue (k)", 1, 1, 1),
-            ],
-            filters: vec![],
-        },
+        PageBuilder::new("growth-indicators", "Growth Indicators", "Growth", 2)
+            .chart(C::line("Revenue & Profit Growth", "monthly_trends", "month", "revenue,profit", "USD (k)").at(0, 0, 2).build())
+            .chart(C::line("Visitor Growth", "website_traffic", "month", "visitors,signups", "Count").at(1, 0, 1).build())
+            .chart(C::bar("Quarterly Products", "quarterly_products", "quarter", "product", "value", "Revenue (k)").at(1, 1, 1).build())
+            .build(),
         // 14. Cost Optimization — Threshold on profit margin
-        Page {
-            slug: "cost-optimization".into(), title: "Cost Optimization".into(),
-            nav_label: "Costs".into(), grid_cols: 2,
-            specs: vec![
-                hbar_spec("Spending by Category", "cost_breakdown", "category", "amount", "USD (k)", 0, 0, 2),
-                line("Expense vs Margin Trend", "monthly_trends", "month", "expenses,margin", "Value", 1, 0, 1),
-                scatter_filtered("Revenue vs Profit Efficiency", "scatter_performance", "revenue", "profit", "Revenue (k)", "Profit (k)", 1, 1, 1),
-            ],
-            filters: vec![
-                FilterSpec {
-                    source_key: "scatter_performance".into(), column: "profit".into(),
-                    label: "Profitable Only (>30k)".into(),
-                    config: FilterConfig::Threshold { value: 30.0, above: true },
-                },
-            ],
-        },
+        PageBuilder::new("cost-optimization", "Cost Optimization", "Costs", 2)
+            .chart(C::hbar("Spending by Category", "cost_breakdown", "category", "amount", "USD (k)").at(0, 0, 2).build())
+            .chart(C::line("Expense vs Margin Trend", "monthly_trends", "month", "expenses,margin", "Value").at(1, 0, 1).build())
+            .chart(C::scatter("Revenue vs Profit Efficiency", "scatter_performance", "revenue", "profit", "Revenue (k)", "Profit (k)").at(1, 1, 1).filtered().build())
+            .filter(FilterSpec::threshold("scatter_performance", "profit", "Profitable Only (>30k)", 30.0, true))
+            .build(),
         // 15. Marketing ROI
-        Page {
-            slug: "marketing-roi".into(), title: "Marketing ROI".into(),
-            nav_label: "Marketing".into(), grid_cols: 2,
-            specs: vec![
-                bar("Channel Spend by Quarter", "marketing_channels", "quarter", "channel", "spend", "USD (k)", 0, 0, 2),
-                line("Website Conversions", "website_traffic", "month", "signups,conversions", "Count", 1, 0, 1),
-                hbar_spec("Market Share", "market_share", "company", "share", "%", 1, 1, 1),
-            ],
-            filters: vec![],
-        },
+        PageBuilder::new("marketing-roi", "Marketing ROI", "Marketing", 2)
+            .chart(C::bar("Channel Spend by Quarter", "marketing_channels", "quarter", "channel", "spend", "USD (k)").at(0, 0, 2).build())
+            .chart(C::line("Website Conversions", "website_traffic", "month", "signups,conversions", "Count").at(1, 0, 1).build())
+            .chart(C::hbar("Market Share", "market_share", "company", "share", "%").at(1, 1, 1).build())
+            .build(),
         // 16. Operations Dashboard
-        Page {
-            slug: "operations-dashboard".into(), title: "Operations Dashboard".into(),
-            nav_label: "Operations".into(), grid_cols: 3,
-            specs: vec![
-                hbar_spec("Project Status", "project_status", "project", "completion", "% Complete", 0, 0, 1),
-                hbar_spec("Cost Breakdown", "cost_breakdown", "category", "amount", "USD (k)", 0, 1, 1),
-                hbar_spec("Satisfaction", "satisfaction", "category", "score", "Score", 0, 2, 1),
-                line("Traffic & Signups", "website_traffic", "month", "visitors,signups", "Count", 1, 0, 2),
-                scatter_spec("Team Efficiency", "scatter_performance", "employees", "profit", "Team Size", "Profit (k)", 1, 2, 1),
-            ],
-            filters: vec![],
-        },
+        PageBuilder::new("operations-dashboard", "Operations Dashboard", "Operations", 3)
+            .chart(C::hbar("Project Status", "project_status", "project", "completion", "% Complete").at(0, 0, 1).build())
+            .chart(C::hbar("Cost Breakdown", "cost_breakdown", "category", "amount", "USD (k)").at(0, 1, 1).build())
+            .chart(C::hbar("Satisfaction", "satisfaction", "category", "score", "Score").at(0, 2, 1).build())
+            .chart(C::line("Traffic & Signups", "website_traffic", "month", "visitors,signups", "Count").at(1, 0, 2).build())
+            .chart(C::scatter("Team Efficiency", "scatter_performance", "employees", "profit", "Team Size", "Profit (k)").at(1, 2, 1).build())
+            .build(),
         // 17. Financial Health — combined: GroupFilter + Range
-        Page {
-            slug: "financial-health".into(), title: "Financial Health".into(),
-            nav_label: "Finance".into(), grid_cols: 2,
-            specs: vec![
-                line("Quarterly Revenue, Costs & Margin", "quarterly_trends", "quarter", "revenue,costs,margin", "Value", 0, 0, 2),
-                bar("Monthly Revenue vs Expenses", "monthly_revenue", "month", "category", "value", "USD (k)", 1, 0, 1),
-                hbar_spec("Cost Structure", "cost_breakdown", "category", "amount", "USD (k)", 1, 1, 1),
-                scatter_filtered("Profitability Map", "scatter_performance", "revenue", "profit", "Revenue (k)", "Profit (k)", 2, 0, 2),
-            ],
-            filters: vec![
-                FilterSpec {
-                    source_key: "scatter_performance".into(), column: "tier".into(),
-                    label: "Company Tier".into(),
-                    config: FilterConfig::Select { options: vec!["Small", "Medium", "Large"] },
-                },
-                FilterSpec {
-                    source_key: "scatter_performance".into(), column: "employees".into(),
-                    label: "Team Size Range".into(),
-                    config: FilterConfig::Range { min: 4.0, max: 40.0, step: 1.0 },
-                },
-            ],
-        },
+        PageBuilder::new("financial-health", "Financial Health", "Finance", 2)
+            .chart(C::line("Quarterly Revenue, Costs & Margin", "quarterly_trends", "quarter", "revenue,costs,margin", "Value").at(0, 0, 2).build())
+            .chart(C::bar("Monthly Revenue vs Expenses", "monthly_revenue", "month", "category", "value", "USD (k)").at(1, 0, 1).build())
+            .chart(C::hbar("Cost Structure", "cost_breakdown", "category", "amount", "USD (k)").at(1, 1, 1).build())
+            .chart(C::scatter("Profitability Map", "scatter_performance", "revenue", "profit", "Revenue (k)", "Profit (k)").at(2, 0, 2).filtered().build())
+            .filter(FilterSpec::select("scatter_performance", "tier", "Company Tier", vec!["Small", "Medium", "Large"]))
+            .filter(FilterSpec::range("scatter_performance", "employees", "Team Size Range", 4.0, 40.0, 1.0))
+            .build(),
         // 18. Workforce Planning — TopN + Threshold combined
-        Page {
-            slug: "workforce-planning".into(), title: "Workforce Planning".into(),
-            nav_label: "Workforce".into(), grid_cols: 2,
-            specs: vec![
-                bar("Headcount Growth", "dept_headcount", "department", "year", "count", "Employees", 0, 0, 2),
-                scatter_filtered("Team Size vs Revenue", "scatter_performance", "employees", "revenue", "Employees", "Revenue (k)", 1, 0, 1),
-                scatter_filtered("Team Size vs Satisfaction", "scatter_performance", "employees", "satisfaction", "Employees", "Rating", 1, 1, 1),
-                hbar_spec("Budget by Department", "cost_breakdown", "category", "amount", "USD (k)", 2, 0, 2),
-            ],
-            filters: vec![
-                FilterSpec {
-                    source_key: "scatter_performance".into(), column: "revenue".into(),
-                    label: "Top N by Revenue".into(),
-                    config: FilterConfig::TopN { max_n: 30, descending: true },
-                },
-                FilterSpec {
-                    source_key: "scatter_performance".into(), column: "satisfaction".into(),
-                    label: "High Satisfaction Only (>4.0)".into(),
-                    config: FilterConfig::Threshold { value: 4.0, above: true },
-                },
-            ],
-        },
+        PageBuilder::new("workforce-planning", "Workforce Planning", "Workforce", 2)
+            .chart(C::bar("Headcount Growth", "dept_headcount", "department", "year", "count", "Employees").at(0, 0, 2).build())
+            .chart(C::scatter("Team Size vs Revenue", "scatter_performance", "employees", "revenue", "Employees", "Revenue (k)").at(1, 0, 1).filtered().build())
+            .chart(C::scatter("Team Size vs Satisfaction", "scatter_performance", "employees", "satisfaction", "Employees", "Rating").at(1, 1, 1).filtered().build())
+            .chart(C::hbar("Budget by Department", "cost_breakdown", "category", "amount", "USD (k)").at(2, 0, 2).build())
+            .filter(FilterSpec::top_n("scatter_performance", "revenue", "Top N by Revenue", 30, true))
+            .filter(FilterSpec::threshold("scatter_performance", "satisfaction", "High Satisfaction Only (>4.0)", 4.0, true))
+            .build(),
         // 19. Forecast & Targets
-        Page {
-            slug: "forecast-targets".into(), title: "Forecast & Targets".into(),
-            nav_label: "Forecast".into(), grid_cols: 2,
-            specs: vec![
-                line("Monthly Forecast", "monthly_trends", "month", "revenue,expenses,profit", "USD (k)", 0, 0, 2),
-                line("Quarterly Outlook", "quarterly_trends", "quarter", "revenue,costs", "USD (k)", 1, 0, 1),
-                hbar_spec("Target Completion", "project_status", "project", "completion", "% Complete", 1, 1, 1),
-            ],
-            filters: vec![],
-        },
+        PageBuilder::new("forecast-targets", "Forecast & Targets", "Forecast", 2)
+            .chart(C::line("Monthly Forecast", "monthly_trends", "month", "revenue,expenses,profit", "USD (k)").at(0, 0, 2).build())
+            .chart(C::line("Quarterly Outlook", "quarterly_trends", "quarter", "revenue,costs", "USD (k)").at(1, 0, 1).build())
+            .chart(C::hbar("Target Completion", "project_status", "project", "completion", "% Complete").at(1, 1, 1).build())
+            .build(),
         // 20. Annual Review
-        Page {
-            slug: "annual-review".into(), title: "Annual Review".into(),
-            nav_label: "Annual".into(), grid_cols: 2,
-            specs: vec![
-                bar("Monthly Revenue vs Expenses", "monthly_revenue", "month", "category", "value", "USD (k)", 0, 0, 2),
-                bar("Quarterly Product Performance", "quarterly_products", "quarter", "product", "value", "Revenue (k)", 1, 0, 2),
-                hbar_spec("Market Share", "market_share", "company", "share", "%", 2, 0, 1),
-                hbar_spec("Satisfaction Scores", "satisfaction", "category", "score", "Score", 2, 1, 1),
-                line("Full Year Trends", "monthly_trends", "month", "revenue,expenses,profit,margin", "Value", 3, 0, 2),
-            ],
-            filters: vec![],
-        },
+        PageBuilder::new("annual-review", "Annual Review", "Annual", 2)
+            .chart(C::bar("Monthly Revenue vs Expenses", "monthly_revenue", "month", "category", "value", "USD (k)").at(0, 0, 2).build())
+            .chart(C::bar("Quarterly Product Performance", "quarterly_products", "quarter", "product", "value", "Revenue (k)").at(1, 0, 2).build())
+            .chart(C::hbar("Market Share", "market_share", "company", "share", "%").at(2, 0, 1).build())
+            .chart(C::hbar("Satisfaction Scores", "satisfaction", "category", "score", "Score").at(2, 1, 1).build())
+            .chart(C::line("Full Year Trends", "monthly_trends", "month", "revenue,expenses,profit,margin", "Value").at(3, 0, 2).build())
+            .build(),
     ];
 
     // ── PyO3 bridge ─────────────────────────────────────────────────────────

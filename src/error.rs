@@ -39,6 +39,7 @@ use std::fmt;
 /// | [`Serialization`](Self::Serialization) | Polars failed to write Arrow IPC | Check DataFrame schema and column types |
 /// | [`Python`](Self::Python) | Python raised an exception during rendering | Check `render.py` logic and Python dependencies |
 /// | [`InvalidScript`](Self::InvalidScript) | Embedded script contains a null byte | Should not occur in normal usage |
+/// | [`GridValidation`](Self::GridValidation) | Page grid layout is invalid | Fix `grid_cols`, column positions, spans, or overlaps |
 #[derive(Debug)]
 pub enum ChartError {
     /// A required field was not set on a config builder.
@@ -64,6 +65,15 @@ pub enum ChartError {
     /// This should not occur under normal circumstances since the script is
     /// embedded at compile time via `include_str!()`.
     InvalidScript,
+
+    /// The page grid layout is invalid.
+    ///
+    /// Common causes:
+    /// - `grid_cols` is 0 or exceeds [`MAX_GRID_COLS`](crate::charts::MAX_GRID_COLS)
+    /// - A module's column index is out of bounds for the grid
+    /// - A module's `col + col_span` overflows the grid width
+    /// - Two modules in the same row occupy overlapping columns
+    GridValidation(String),
 }
 
 impl fmt::Display for ChartError {
@@ -73,6 +83,7 @@ impl fmt::Display for ChartError {
             ChartError::Serialization(e) => write!(f, "DataFrame serialization failed: {e}"),
             ChartError::Python(e) => write!(f, "Python execution failed: {e}"),
             ChartError::InvalidScript => write!(f, "embedded Python script contains a null byte"),
+            ChartError::GridValidation(msg) => write!(f, "grid validation failed: {msg}"),
         }
     }
 }
@@ -86,6 +97,7 @@ impl std::error::Error for ChartError {
         }
     }
 }
+
 
 impl From<polars::error::PolarsError> for ChartError {
     fn from(e: polars::error::PolarsError) -> Self {

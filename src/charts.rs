@@ -34,6 +34,14 @@
 
 use crate::error::ChartError;
 
+// ── Grid constants ────────────────────────────────────────────────────────────
+
+/// Maximum number of columns allowed in a page grid.
+///
+/// Grids wider than this are rejected by [`PageBuilder::build`](crate::pages::PageBuilder::build)
+/// with a [`ChartError::GridValidation`](crate::error::ChartError::GridValidation) error.
+pub const MAX_GRID_COLS: usize = 6;
+
 // ── Chart configuration structs ──────────────────────────────────────────────
 
 /// Configuration for a grouped bar chart.

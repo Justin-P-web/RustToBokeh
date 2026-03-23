@@ -28,7 +28,7 @@
 //!                     .y_label("USD")
 //!                     .build()?
 //!             ).at(0, 0, 2).build())
-//!             .build(),
+//!             .build()?,
 //!     );
 //!     dash.render()?;
 //!     Ok(())
@@ -72,6 +72,7 @@ pub use charts::{
     GroupedBarConfig, GroupedBarConfigBuilder,
     HBarConfig, HBarConfigBuilder,
     LineConfig, LineConfigBuilder,
+    MAX_GRID_COLS,
     ScatterConfig, ScatterConfigBuilder,
 };
 pub use error::ChartError;
@@ -159,7 +160,7 @@ pub fn serialize_df(df: &mut DataFrame) -> Result<Vec<u8>, ChartError> {
 ///                 .x("x").y("y").x_label("X").y_label("Y")
 ///                 .build()?
 ///         ).at(0, 0, 2).build())
-///         .build(),
+///         .build()?,
 /// );
 /// dash.render()?;
 /// ```

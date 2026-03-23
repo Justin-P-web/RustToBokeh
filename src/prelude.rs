@@ -18,6 +18,7 @@ pub use crate::charts::{
     GroupedBarConfig, GroupedBarConfigBuilder,
     HBarConfig, HBarConfigBuilder,
     LineConfig, LineConfigBuilder,
+    MAX_GRID_COLS,
     ScatterConfig, ScatterConfigBuilder,
 };
 pub use crate::error::ChartError;

@@ -224,7 +224,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                 Scat::builder().x("revenue").y("profit").x_label("Revenue (k)").y_label("Profit (k)").build()?
             ).at(2, 0, 2).filtered().build())
             .filter(FilterSpec::range("scatter_performance", "revenue", "Revenue Range", 40.0, 320.0, 10.0))
-            .build(),
+            .build()?,
     );
 
     // 2. Revenue Overview
@@ -243,7 +243,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             .chart(C::bar("Regional Sales", "regional_sales",
                 Bar::builder().x("region").group("channel").value("value").y_label("USD (k)").build()?
             ).at(2, 0, 2).build())
-            .build(),
+            .build()?,
     );
 
     // 3. Expense Analysis
@@ -262,7 +262,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             .chart(C::line("Margin Trend", "monthly_trends",
                 Line::builder().x("month").y_cols(&["margin"]).y_label("%").build()?
             ).at(1, 1, 1).build())
-            .build(),
+            .build()?,
     );
 
     // 4. Quarterly Performance
@@ -278,7 +278,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             .chart(C::line("Quarterly Margin", "quarterly_trends",
                 Line::builder().x("quarter").y_cols(&["margin"]).y_label("%").build()?
             ).at(1, 1, 1).build())
-            .build(),
+            .build()?,
     );
 
     // 5. Product Analysis
@@ -296,7 +296,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             ).at(1, 1, 1).filtered().build())
             .filter(FilterSpec::select("scatter_performance", "tier", "Company Tier", vec!["Small", "Medium", "Large"]))
             .filter(FilterSpec::range("scatter_performance", "revenue", "Revenue Range", 40.0, 320.0, 10.0))
-            .build(),
+            .build()?,
     );
 
     // 6. Regional Breakdown
@@ -312,7 +312,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             .chart(C::scatter("Employees vs Revenue", "scatter_performance",
                 Scat::builder().x("employees").y("revenue").x_label("Team Size").y_label("Revenue (k)").build()?
             ).at(1, 1, 1).build())
-            .build(),
+            .build()?,
     );
 
     // 7. Team Metrics
@@ -329,7 +329,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                 Scat::builder().x("employees").y("satisfaction").x_label("Team Size").y_label("Rating").build()?
             ).at(1, 1, 1).filtered().build())
             .filter(FilterSpec::threshold("scatter_performance", "satisfaction", "High Satisfaction Only (>4.2)", 4.2, true))
-            .build(),
+            .build()?,
     );
 
     // 8. Customer Insights
@@ -346,7 +346,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                 Scat::builder().x("profit").y("satisfaction").x_label("Profit (k)").y_label("Rating").build()?
             ).at(1, 1, 1).filtered().build())
             .filter(FilterSpec::group("scatter_performance", "tier", "Company Tier", vec!["Small", "Medium", "Large"]))
-            .build(),
+            .build()?,
     );
 
     // 9. Web Analytics
@@ -362,7 +362,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             .chart(C::line("Conversions Over Time", "website_traffic",
                 Line::builder().x("month").y_cols(&["conversions"]).y_label("Conversions").build()?
             ).at(1, 1, 1).build())
-            .build(),
+            .build()?,
     );
 
     // 10. Market Position
@@ -378,7 +378,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             .chart(C::line("Revenue vs Costs (Quarterly)", "quarterly_trends",
                 Line::builder().x("quarter").y_cols(&["revenue", "costs"]).y_label("USD (k)").build()?
             ).at(1, 0, 2).build())
-            .build(),
+            .build()?,
     );
 
     // 11. Budget Management
@@ -394,7 +394,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             .chart(C::line("Revenue Trend", "monthly_trends",
                 Line::builder().x("month").y_cols(&["revenue", "expenses"]).y_label("USD (k)").build()?
             ).at(1, 1, 1).build())
-            .build(),
+            .build()?,
     );
 
     // 12. Project Portfolio
@@ -411,7 +411,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                 Scat::builder().x("profit").y("employees").x_label("Profit (k)").y_label("Team Size").build()?
             ).at(1, 1, 1).filtered().build())
             .filter(FilterSpec::top_n("scatter_performance", "revenue", "Top N by Revenue", 30, true))
-            .build(),
+            .build()?,
     );
 
     // 13. Growth Indicators
@@ -427,7 +427,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             .chart(C::bar("Quarterly Products", "quarterly_products",
                 Bar::builder().x("quarter").group("product").value("value").y_label("Revenue (k)").build()?
             ).at(1, 1, 1).build())
-            .build(),
+            .build()?,
     );
 
     // 14. Cost Optimization
@@ -444,7 +444,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                 Scat::builder().x("revenue").y("profit").x_label("Revenue (k)").y_label("Profit (k)").build()?
             ).at(1, 1, 1).filtered().build())
             .filter(FilterSpec::threshold("scatter_performance", "profit", "Profitable Only (>30k)", 30.0, true))
-            .build(),
+            .build()?,
     );
 
     // 15. Marketing ROI
@@ -460,7 +460,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             .chart(C::hbar("Market Share", "market_share",
                 HB::builder().category("company").value("share").x_label("%").build()?
             ).at(1, 1, 1).build())
-            .build(),
+            .build()?,
     );
 
     // 16. Operations Dashboard
@@ -482,7 +482,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             .chart(C::scatter("Team Efficiency", "scatter_performance",
                 Scat::builder().x("employees").y("profit").x_label("Team Size").y_label("Profit (k)").build()?
             ).at(1, 2, 1).build())
-            .build(),
+            .build()?,
     );
 
     // 17. Financial Health
@@ -503,7 +503,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             ).at(2, 0, 2).filtered().build())
             .filter(FilterSpec::select("scatter_performance", "tier", "Company Tier", vec!["Small", "Medium", "Large"]))
             .filter(FilterSpec::range("scatter_performance", "employees", "Team Size Range", 4.0, 40.0, 1.0))
-            .build(),
+            .build()?,
     );
 
     // 18. Workforce Planning
@@ -524,7 +524,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             ).at(2, 0, 2).build())
             .filter(FilterSpec::top_n("scatter_performance", "revenue", "Top N by Revenue", 30, true))
             .filter(FilterSpec::threshold("scatter_performance", "satisfaction", "High Satisfaction Only (>4.0)", 4.0, true))
-            .build(),
+            .build()?,
     );
 
     // 19. Forecast & Targets
@@ -540,7 +540,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             .chart(C::hbar("Target Completion", "project_status",
                 HB::builder().category("project").value("completion").x_label("% Complete").build()?
             ).at(1, 1, 1).build())
-            .build(),
+            .build()?,
     );
 
     // 20. Annual Review
@@ -562,7 +562,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             .chart(C::line("Full Year Trends", "monthly_trends",
                 Line::builder().x("month").y_cols(&["revenue", "expenses", "profit", "margin"]).y_label("Value").build()?
             ).at(3, 0, 2).build())
-            .build(),
+            .build()?,
     );
 
     // 21. Module Showcase — demonstrates paragraph, table, and chart modules
@@ -623,7 +623,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                     .at(2, 1, 1)
                     .build(),
             )
-            .build(),
+            .build()?,
     );
 
     dash.render()?;

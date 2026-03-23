@@ -6,7 +6,8 @@
 //! in a shared CSS grid. The dashboard renderer produces one HTML file per
 //! page and automatically generates a navigation bar linking all pages together.
 
-use crate::charts::{ChartSpec, FilterSpec};
+use crate::charts::{ChartSpec, FilterSpec, MAX_GRID_COLS};
+use crate::error::ChartError;
 use crate::modules::{PageModule, ParagraphSpec, TableSpec};
 
 // ── Page ─────────────────────────────────────────────────────────────────────
@@ -64,7 +65,7 @@ pub struct Page {
 ///             .build()?
 ///     ).at(1, 0, 2).build())
 ///     .filter(FilterSpec::range("revenue_data", "amount", "Amount", 0.0, 1000.0, 10.0))
-///     .build();
+///     .build()?;
 /// ```
 pub struct PageBuilder {
     slug: String,
@@ -86,7 +87,7 @@ impl PageBuilder {
     ///   `"revenue-overview"`).
     /// * `title` — Full title displayed at the top of the page.
     /// * `nav_label` — Short label for the navigation bar.
-    /// * `grid_cols` — Number of columns in the page's CSS grid layout.
+    /// * `grid_cols` — Number of columns in the page's CSS grid layout (1–[`MAX_GRID_COLS`]).
     ///   Modules are positioned within this grid via their `.at()` method.
     pub fn new(slug: &str, title: &str, nav_label: &str, grid_cols: usize) -> Self {
         Self {
@@ -148,9 +149,77 @@ impl PageBuilder {
         self
     }
 
-    /// Consume the builder and produce a [`Page`].
-    pub fn build(self) -> Page {
-        Page {
+    /// Consume the builder and produce a [`Page`], validating the grid layout.
+    ///
+    /// # Validation rules
+    ///
+    /// - `grid_cols` must be between 1 and [`MAX_GRID_COLS`] (inclusive).
+    /// - Every module's `col_span` must be at least 1.
+    /// - Every module's column index must be less than `grid_cols`.
+    /// - Every module's `col + col_span` must not exceed `grid_cols`.
+    /// - No two modules in the same row may occupy overlapping columns.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`ChartError::GridValidation`] if any rule is violated.
+    pub fn build(self) -> Result<Page, ChartError> {
+        // Validate grid column count.
+        if self.grid_cols == 0 || self.grid_cols > MAX_GRID_COLS {
+            return Err(ChartError::GridValidation(format!(
+                "grid_cols must be between 1 and {MAX_GRID_COLS}, got {}",
+                self.grid_cols
+            )));
+        }
+
+        // Collect (row, col_start, col_end_exclusive) for every module.
+        let mut cells: Vec<(usize, usize, usize)> = Vec::with_capacity(self.modules.len());
+
+        for module in &self.modules {
+            let (row, col, span) = match module {
+                PageModule::Chart(s)     => (s.grid.row, s.grid.col, s.grid.col_span),
+                PageModule::Paragraph(s) => (s.grid.row, s.grid.col, s.grid.col_span),
+                PageModule::Table(s)     => (s.grid.row, s.grid.col, s.grid.col_span),
+            };
+
+            if span == 0 {
+                return Err(ChartError::GridValidation(
+                    "col_span must be at least 1".into(),
+                ));
+            }
+
+            if col >= self.grid_cols {
+                return Err(ChartError::GridValidation(format!(
+                    "column index {col} is out of bounds for a {}-column grid",
+                    self.grid_cols
+                )));
+            }
+
+            if col + span > self.grid_cols {
+                return Err(ChartError::GridValidation(format!(
+                    "element at row {row}, col {col} with span {span} overflows \
+                     the {}-column grid (col + span = {})",
+                    self.grid_cols,
+                    col + span,
+                )));
+            }
+
+            cells.push((row, col, col + span));
+        }
+
+        // Check for overlapping modules within the same row.
+        for i in 0..cells.len() {
+            let (row_i, start_i, end_i) = cells[i];
+            for (row_j, start_j, end_j) in cells.iter().skip(i + 1) {
+                if row_i == *row_j && start_i < *end_j && end_i > *start_j {
+                    return Err(ChartError::GridValidation(format!(
+                        "modules overlap in row {row_i}: columns [{start_i}, {end_i}) \
+                         and [{start_j}, {end_j}) intersect"
+                    )));
+                }
+            }
+        }
+
+        Ok(Page {
             slug: self.slug,
             title: self.title,
             nav_label: self.nav_label,
@@ -158,6 +227,6 @@ impl PageBuilder {
             modules: self.modules,
             filters: self.filters,
             category: self.category,
-        }
+        })
     }
 }

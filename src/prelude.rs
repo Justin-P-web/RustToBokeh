@@ -14,18 +14,14 @@
 //! [`ChartError`] for error handling.
 
 pub use crate::charts::{
-    ChartConfig, ChartSpec, ChartSpecBuilder, FilterConfig, FilterSpec, GridCell,
-    GroupedBarConfig, GroupedBarConfigBuilder,
-    HBarConfig, HBarConfigBuilder,
-    LineConfig, LineConfigBuilder,
-    MAX_GRID_COLS,
-    ScatterConfig, ScatterConfigBuilder,
+    ChartConfig, ChartSpec, ChartSpecBuilder, FilterConfig, FilterSpec, GridCell, GroupedBarConfig,
+    GroupedBarConfigBuilder, HBarConfig, HBarConfigBuilder, LineConfig, LineConfigBuilder,
+    ScatterConfig, ScatterConfigBuilder, MAX_GRID_COLS,
 };
 pub use crate::error::ChartError;
 pub use crate::modules::{
-    ColumnFormat, PageModule,
-    ParagraphSpec, ParagraphSpecBuilder,
-    TableColumn, TableSpec, TableSpecBuilder,
+    ColumnFormat, PageModule, ParagraphSpec, ParagraphSpecBuilder, TableColumn, TableSpec,
+    TableSpecBuilder,
 };
 pub use crate::pages::{Page, PageBuilder};
-pub use crate::{Dashboard, NavStyle, render_dashboard, serialize_df};
+pub use crate::{render_dashboard, serialize_df, Dashboard, NavStyle};

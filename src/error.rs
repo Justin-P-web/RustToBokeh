@@ -1,7 +1,7 @@
 //! Error types for chart building and dashboard rendering.
 //!
 //! [`ChartError`] is the single error type used throughout the library. It
-//! covers builder validation, DataFrame serialization, and Python execution
+//! covers builder validation, `DataFrame` serialization, and Python execution
 //! failures.
 //!
 //! # Handling errors
@@ -29,7 +29,7 @@
 use std::fmt;
 
 /// Errors that can occur when building chart configurations, serializing
-/// DataFrames, or rendering dashboards.
+/// `DataFrames`, or rendering dashboards.
 ///
 /// # Variants
 ///
@@ -48,7 +48,7 @@ pub enum ChartError {
     /// (e.g. `"x_col"`, `"value_col"`).
     MissingField(&'static str),
 
-    /// DataFrame serialization to Arrow IPC format failed.
+    /// `DataFrame` serialization to Arrow IPC format failed.
     ///
     /// Wraps the underlying [`polars::error::PolarsError`].
     Serialization(polars::error::PolarsError),
@@ -97,7 +97,6 @@ impl std::error::Error for ChartError {
         }
     }
 }
-
 
 impl From<polars::error::PolarsError> for ChartError {
     fn from(e: polars::error::PolarsError) -> Self {

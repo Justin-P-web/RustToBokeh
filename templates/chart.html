@@ -127,19 +127,15 @@
         /* Top-level dropdown menu */
         .nav-horizontal .nav-dd-menu {
             display: none;
-            position: absolute;
-            top: calc(100% + 1px);
-            left: 0;
+            position: fixed; /* escape overflow-x:auto clipping on scroll container */
             background: #fff;
             border: 1px solid #dde2e8;
             border-radius: 6px;
             box-shadow: 0 6px 24px rgba(0,0,0,0.12);
             min-width: 190px;
-            z-index: 200;
+            z-index: 1000;
             padding: 4px 0;
         }
-        .nav-horizontal .nav-dd:hover > .nav-dd-menu,
-        .nav-horizontal .nav-dd.open > .nav-dd-menu { display: block; }
         /* Dropdown page link */
         .nav-horizontal .nav-dd-item {
             display: block;
@@ -188,22 +184,18 @@
         .nav-horizontal .nav-dd-sub.has-active > .nav-dd-sub-trigger {
             color: #4C72B0; font-weight: 700;
         }
-        /* Sub-menu opens to the right */
+        /* Sub-menu — position fixed, placed to the right by JS */
         .nav-horizontal .nav-dd-sub-menu {
             display: none;
-            position: absolute;
-            top: -4px;
-            left: calc(100% - 2px);
+            position: fixed;
             background: #fff;
             border: 1px solid #dde2e8;
             border-radius: 6px;
             box-shadow: 0 6px 24px rgba(0,0,0,0.12);
             min-width: 190px;
-            z-index: 300;
+            z-index: 1001;
             padding: 4px 0;
         }
-        .nav-horizontal .nav-dd-sub:hover > .nav-dd-sub-menu,
-        .nav-horizontal .nav-dd-sub.open > .nav-dd-sub-menu { display: block; }
 
         /* ── Vertical nav ──────────────────────────────────────────────────── */
         .nav-vertical {
@@ -424,45 +416,46 @@
 </head>
 <body class="{% if nav_style == 'vertical' %}layout-vertical{% else %}layout-horizontal{% endif %}">
 
-    {# Sub-dropdown node (right-opening panel, recursive) — defined first so h_dd_node can use it #}
-    {% macro h_dd_sub_node(node) %}
+    {# Sub-dropdown node (right-opening panel, recursive).
+       cur = current_slug passed explicitly because Jinja2 macros don't inherit outer scope. #}
+    {% macro h_dd_sub_node(node, cur) %}
     <div class="nav-dd-sub{% if node.has_active %} has-active{% endif %}">
         <button class="nav-dd-sub-trigger">{{ node.label }}<span class="caret">▸</span></button>
         <div class="nav-dd-sub-menu">
             {% for page in node.pages %}
             <a href="{{ page.slug }}.html"
-               class="nav-dd-item{% if page.slug == current_slug %} active{% endif %}">{{ page.label }}</a>
+               class="nav-dd-item{% if page.slug == cur %} active{% endif %}">{{ page.label }}</a>
             {% endfor %}
             {% if node.pages and node.children %}<hr class="nav-dd-divider">{% endif %}
-            {% for child in node.children %}{{ h_dd_sub_node(child) }}{% endfor %}
+            {% for child in node.children %}{{ h_dd_sub_node(child, cur) }}{% endfor %}
         </div>
     </div>
     {% endmacro %}
 
-    {# ── Top-level horizontal dropdown node (category with children) ──────── #}
-    {% macro h_dd_node(node) %}
+    {# ── Top-level horizontal dropdown node ──────────────────────────────── #}
+    {% macro h_dd_node(node, cur) %}
     <div class="nav-dd{% if node.has_active %} has-active{% endif %}">
         <button class="nav-dd-trigger">{{ node.label }}<span class="caret">▾</span></button>
         <div class="nav-dd-menu">
             {% for page in node.pages %}
             <a href="{{ page.slug }}.html"
-               class="nav-dd-item{% if page.slug == current_slug %} active{% endif %}">{{ page.label }}</a>
+               class="nav-dd-item{% if page.slug == cur %} active{% endif %}">{{ page.label }}</a>
             {% endfor %}
             {% if node.pages and node.children %}<hr class="nav-dd-divider">{% endif %}
-            {% for child in node.children %}{{ h_dd_sub_node(child) }}{% endfor %}
+            {% for child in node.children %}{{ h_dd_sub_node(child, cur) }}{% endfor %}
         </div>
     </div>
     {% endmacro %}
 
-    {# ── Recursive macro: vertical sidebar node ─────────────────────────── #}
-    {% macro v_node(node) %}
+    {# ── Recursive vertical sidebar node ─────────────────────────────────── #}
+    {% macro v_node(node, cur) %}
     <details{% if node.has_active %} open{% endif %}>
         <summary>{{ node.label }}</summary>
         <div class="nav-indent">
             {% for page in node.pages %}
-            <a href="{{ page.slug }}.html"{% if page.slug == current_slug %} class="active"{% endif %}>{{ page.label }}</a>
+            <a href="{{ page.slug }}.html"{% if page.slug == cur %} class="active"{% endif %}>{{ page.label }}</a>
             {% endfor %}
-            {% for child in node.children %}{{ v_node(child) }}{% endfor %}
+            {% for child in node.children %}{{ v_node(child, cur) }}{% endfor %}
         </div>
     </details>
     {% endmacro %}
@@ -478,7 +471,7 @@
             <a href="{{ page.slug }}.html"{% if page.slug == current_slug %} class="active"{% endif %}>{{ page.label }}</a>
             {% endfor %}
         </div>
-        {% for node in nav_tree.children %}{{ v_node(node) }}{% endfor %}
+        {% for node in nav_tree.children %}{{ v_node(node, current_slug) }}{% endfor %}
     </nav>
 
     {% else %}
@@ -493,39 +486,72 @@
                 <a href="{{ page.slug }}.html"
                    class="nav-tab{% if page.slug == current_slug %} active{% endif %}">{{ page.label }}</a>
                 {% endfor %}
-                {% for node in nav_tree.children %}{{ h_dd_node(node) }}{% endfor %}
+                {% for node in nav_tree.children %}{{ h_dd_node(node, current_slug) }}{% endfor %}
             </div>
         </div>
     </nav>
     {% endif %}
 
     <script>
-    // Click-to-toggle nav dropdowns; hover already handled by CSS
+    // Nav dropdowns: menus use position:fixed (to escape overflow-x:auto clipping).
+    // JS handles both hover (mouseenter/leave with a short delay) and click-to-toggle.
     (function () {
-        function closeAll() {
-            document.querySelectorAll('.nav-dd.open, .nav-dd-sub.open').forEach(function (el) {
-                el.classList.remove('open');
-            });
+        function showMenu(menu, x, y) {
+            clearTimeout(menu._ht);
+            // Clamp to viewport so menu never spawns off-screen
+            menu.style.left = x + 'px';
+            menu.style.top  = y + 'px';
+            menu.style.display = 'block';
+            // After paint, clamp right edge
+            var vw = window.innerWidth;
+            var mw = menu.offsetWidth;
+            if (x + mw > vw) menu.style.left = Math.max(0, vw - mw) + 'px';
         }
-        document.addEventListener('click', closeAll);
-        document.querySelectorAll('.nav-dd-trigger').forEach(function (btn) {
-            btn.addEventListener('click', function (e) {
+        function hideMenu(menu) {
+            menu._ht = setTimeout(function () { menu.style.display = 'none'; }, 150);
+        }
+        function keepOpen(menu) { clearTimeout(menu._ht); }
+
+        function wire(trigger, menu, openRight) {
+            trigger.addEventListener('mouseenter', function () {
+                var r = trigger.getBoundingClientRect();
+                showMenu(menu, openRight ? r.right : r.left, openRight ? r.top : r.bottom);
+            });
+            trigger.addEventListener('mouseleave', function () { hideMenu(menu); });
+            menu.addEventListener('mouseenter', function () { keepOpen(menu); });
+            menu.addEventListener('mouseleave', function () { hideMenu(menu); });
+        }
+
+        // Top-level dropdowns
+        document.querySelectorAll('.nav-horizontal .nav-dd').forEach(function (dd) {
+            var t = dd.querySelector(':scope > .nav-dd-trigger');
+            var m = dd.querySelector(':scope > .nav-dd-menu');
+            if (!t || !m) return;
+            wire(t, m, false);
+            // Toggle on click (touch / keyboard users)
+            t.addEventListener('click', function (e) {
                 e.stopPropagation();
-                var dd = btn.closest('.nav-dd');
-                var wasOpen = dd.classList.contains('open');
-                closeAll();
-                if (!wasOpen) dd.classList.add('open');
+                if (m.style.display === 'block') {
+                    m.style.display = 'none';
+                } else {
+                    var r = t.getBoundingClientRect();
+                    showMenu(m, r.left, r.bottom);
+                }
             });
         });
-        document.querySelectorAll('.nav-dd-sub-trigger').forEach(function (btn) {
-            btn.addEventListener('click', function (e) {
-                e.stopPropagation();
-                var sub = btn.closest('.nav-dd-sub');
-                var wasOpen = sub.classList.contains('open');
-                sub.closest('.nav-dd-menu, .nav-dd-sub-menu')
-                   .querySelectorAll('.nav-dd-sub.open').forEach(function (el) { el.classList.remove('open'); });
-                if (!wasOpen) sub.classList.add('open');
-            });
+
+        // Sub-menus (open to the right of their trigger row)
+        document.querySelectorAll('.nav-horizontal .nav-dd-sub').forEach(function (sub) {
+            var t = sub.querySelector(':scope > .nav-dd-sub-trigger');
+            var m = sub.querySelector(':scope > .nav-dd-sub-menu');
+            if (!t || !m) return;
+            wire(t, m, true);
+        });
+
+        // Click outside closes everything
+        document.addEventListener('click', function () {
+            document.querySelectorAll('.nav-horizontal .nav-dd-menu, .nav-horizontal .nav-dd-sub-menu')
+                    .forEach(function (m) { m.style.display = 'none'; });
         });
     })();
     </script>

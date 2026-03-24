@@ -23,7 +23,10 @@ fn main() {
     let out_dir = PathBuf::from(std::env::var("OUT_DIR").expect("OUT_DIR not set"));
     let target_dir = out_dir
         .ancestors()
-        .find(|p| p.file_name().is_some_and(|n| n == "release" || n == "debug"))
+        .find(|p| {
+            p.file_name()
+                .is_some_and(|n| n == "release" || n == "debug")
+        })
         .map(Path::to_path_buf);
 
     let Some(target_dir) = target_dir else {
@@ -37,7 +40,12 @@ fn main() {
         let dst = target_dir.join(dll);
         if src.exists() && !dst.exists() {
             std::fs::copy(&src, &dst).unwrap_or_else(|e| {
-                panic!("Failed to copy {} to {}: {}", src.display(), dst.display(), e)
+                panic!(
+                    "Failed to copy {} to {}: {}",
+                    src.display(),
+                    dst.display(),
+                    e
+                )
             });
             println!("cargo:warning=Copied {} to {}", dll, target_dir.display());
         }

@@ -1,7 +1,7 @@
-//! # RustToBokeh
+//! # `RustToBokeh`
 //!
 //! A library for building interactive multi-page [Bokeh](https://bokeh.org/)
-//! dashboards from Rust, using [Polars](https://pola.rs/) DataFrames for data
+//! dashboards from Rust, using [Polars](https://pola.rs/) `DataFrames` for data
 //! and [PyO3](https://pyo3.rs/) to bridge into Python for rendering.
 //!
 //! ## Quick start
@@ -39,12 +39,12 @@
 //!
 //! The rendering pipeline works as follows:
 //!
-//! 1. **Build DataFrames** in Rust using Polars.
+//! 1. **Build `DataFrames`** in Rust using Polars.
 //! 2. **Register data** with [`Dashboard::add_df`], which serializes each
-//!    DataFrame to Arrow IPC bytes.
+//!    `DataFrame` to Arrow IPC bytes.
 //! 3. **Define pages** with [`PageBuilder`], adding [`ChartSpec`](charts::ChartSpec)s
 //!    and optional [`FilterSpec`](charts::FilterSpec)s.
-//! 4. **Call [`Dashboard::render`]**, which acquires the Python GIL via PyO3,
+//! 4. **Call [`Dashboard::render`]**, which acquires the Python GIL via `PyO3`,
 //!    passes all data and page definitions to `render.py`, and produces one
 //!    HTML file per page in the output directory.
 //!
@@ -68,18 +68,14 @@ pub mod prelude;
 mod render;
 
 pub use charts::{
-    ChartConfig, ChartSpec, ChartSpecBuilder, FilterConfig, FilterSpec, GridCell,
-    GroupedBarConfig, GroupedBarConfigBuilder,
-    HBarConfig, HBarConfigBuilder,
-    LineConfig, LineConfigBuilder,
-    MAX_GRID_COLS,
-    ScatterConfig, ScatterConfigBuilder,
+    ChartConfig, ChartSpec, ChartSpecBuilder, FilterConfig, FilterSpec, GridCell, GroupedBarConfig,
+    GroupedBarConfigBuilder, HBarConfig, HBarConfigBuilder, LineConfig, LineConfigBuilder,
+    ScatterConfig, ScatterConfigBuilder, MAX_GRID_COLS,
 };
 pub use error::ChartError;
 pub use modules::{
-    ColumnFormat, PageModule,
-    ParagraphSpec, ParagraphSpecBuilder,
-    TableColumn, TableSpec, TableSpecBuilder,
+    ColumnFormat, PageModule, ParagraphSpec, ParagraphSpecBuilder, TableColumn, TableSpec,
+    TableSpecBuilder,
 };
 pub use pages::{Page, PageBuilder};
 pub use render::render_dashboard;
@@ -113,7 +109,7 @@ use polars::io::SerWriter;
 use polars::prelude::DataFrame;
 use std::io::Cursor;
 
-/// Serialize a Polars DataFrame to Arrow IPC bytes.
+/// Serialize a Polars `DataFrame` to Arrow IPC bytes.
 ///
 /// This is the format used to pass data across the Rust-Python boundary.
 /// You typically don't need to call this directly — [`Dashboard::add_df`]
@@ -129,7 +125,7 @@ pub fn serialize_df(df: &mut DataFrame) -> Result<Vec<u8>, ChartError> {
     Ok(buf.into_inner())
 }
 
-/// High-level dashboard builder that collects DataFrames and pages, then
+/// High-level dashboard builder that collects `DataFrames` and pages, then
 /// renders everything in one call.
 ///
 /// # Workflow
@@ -137,10 +133,10 @@ pub fn serialize_df(df: &mut DataFrame) -> Result<Vec<u8>, ChartError> {
 /// 1. Create a dashboard with [`Dashboard::new`].
 /// 2. Optionally set the output directory with [`output_dir`](Dashboard::output_dir)
 ///    (defaults to `"output"`).
-/// 3. Register DataFrames with [`add_df`](Dashboard::add_df). Each DataFrame
+/// 3. Register `DataFrames` with [`add_df`](Dashboard::add_df). Each `DataFrame`
 ///    is serialized immediately and stored under the given key.
 /// 4. Add pages with [`add_page`](Dashboard::add_page). Charts on each page
-///    reference DataFrames by their registered key.
+///    reference `DataFrames` by their registered key.
 /// 5. Call [`render`](Dashboard::render) to produce the HTML files.
 ///
 /// # Example
@@ -174,6 +170,7 @@ pub struct Dashboard {
 
 impl Dashboard {
     /// Create an empty dashboard with the default output directory (`"output"`).
+    #[must_use] 
     pub fn new() -> Self {
         Self {
             frames: Vec::new(),
@@ -189,6 +186,7 @@ impl Dashboard {
     /// When set, the title appears as a prominent label at the leading edge of
     /// the navigation (horizontal mode) or at the top of the sidebar (vertical
     /// mode). Defaults to empty (no title shown).
+    #[must_use] 
     pub fn title(mut self, title: &str) -> Self {
         self.title = title.into();
         self
@@ -198,6 +196,7 @@ impl Dashboard {
     ///
     /// Defaults to [`NavStyle::Horizontal`]. Use [`NavStyle::Vertical`] to
     /// render a fixed left sidebar instead of a sticky top bar.
+    #[must_use] 
     pub fn nav_style(mut self, style: NavStyle) -> Self {
         self.nav_style = style;
         self
@@ -207,19 +206,20 @@ impl Dashboard {
     ///
     /// Defaults to `"output"`. The directory is created automatically by the
     /// Python renderer if it does not exist.
+    #[must_use] 
     pub fn output_dir(mut self, dir: &str) -> Self {
         self.output_dir = dir.into();
         self
     }
 
-    /// Register a DataFrame under the given key.
+    /// Register a `DataFrame` under the given key.
     ///
-    /// The DataFrame is serialized to Arrow IPC bytes immediately. Charts
+    /// The `DataFrame` is serialized to Arrow IPC bytes immediately. Charts
     /// reference this data by using the same `key` as their `source_key`.
     ///
     /// # Errors
     ///
-    /// Returns [`ChartError::Serialization`] if the DataFrame cannot be
+    /// Returns [`ChartError::Serialization`] if the `DataFrame` cannot be
     /// serialized (e.g. unsupported column types).
     pub fn add_df(&mut self, key: &str, df: &mut DataFrame) -> Result<&mut Self, ChartError> {
         self.frames.push((key.into(), serialize_df(df)?));
@@ -237,7 +237,7 @@ impl Dashboard {
 
     /// Render all pages to HTML files in the output directory.
     ///
-    /// This acquires the Python GIL, passes all serialized DataFrames and
+    /// This acquires the Python GIL, passes all serialized `DataFrames` and
     /// page definitions to the embedded `render.py` script, and writes one
     /// HTML file per page.
     ///
@@ -252,7 +252,13 @@ impl Dashboard {
             .iter()
             .map(|(k, v)| (k.as_str(), v.clone()))
             .collect();
-        render_dashboard(&refs, &self.pages, &self.output_dir, &self.title, self.nav_style.as_str())
+        render_dashboard(
+            &refs,
+            &self.pages,
+            &self.output_dir,
+            &self.title,
+            self.nav_style.as_str(),
+        )
     }
 }
 
@@ -314,7 +320,11 @@ mod tests {
         let restored = IpcReader::new(Cursor::new(bytes)).finish().unwrap();
         assert_eq!(restored.height(), 2);
         assert_eq!(restored.width(), 2);
-        let names: Vec<&str> = restored.get_column_names().iter().map(|s| s.as_str()).collect();
+        let names: Vec<&str> = restored
+            .get_column_names()
+            .iter()
+            .map(|s| s.as_str())
+            .collect();
         assert!(names.contains(&"name"));
         assert!(names.contains(&"score"));
     }
@@ -397,20 +407,30 @@ mod tests {
         let mut df = df!["a" => [1i64]].unwrap();
         let mut dash = Dashboard::new();
         // add_df returns &mut Self, so multiple calls can be chained
-        dash.add_df("k1", &mut df).unwrap()
-            .add_df("k2", &mut df).unwrap();
+        dash.add_df("k1", &mut df)
+            .unwrap()
+            .add_df("k2", &mut df)
+            .unwrap();
         assert_eq!(dash.frames.len(), 2);
     }
 
     #[test]
     fn dashboard_add_page_stores_page() {
-        use crate::pages::PageBuilder;
         use crate::charts::{ChartSpecBuilder, HBarConfig};
+        use crate::pages::PageBuilder;
 
         let cfg = HBarConfig::builder()
-            .category("c").value("v").x_label("X").build().unwrap();
+            .category("c")
+            .value("v")
+            .x_label("X")
+            .build()
+            .unwrap();
         let page = PageBuilder::new("overview", "Overview", "Ov", 1)
-            .chart(ChartSpecBuilder::hbar("Chart", "data", cfg).at(0, 0, 1).build())
+            .chart(
+                ChartSpecBuilder::hbar("Chart", "data", cfg)
+                    .at(0, 0, 1)
+                    .build(),
+            )
             .build()
             .unwrap();
 
@@ -422,12 +442,16 @@ mod tests {
 
     #[test]
     fn dashboard_add_page_multiple() {
-        use crate::pages::PageBuilder;
         use crate::charts::{ChartSpecBuilder, HBarConfig};
+        use crate::pages::PageBuilder;
 
         let make_page = |slug: &str| {
             let cfg = HBarConfig::builder()
-                .category("c").value("v").x_label("X").build().unwrap();
+                .category("c")
+                .value("v")
+                .x_label("X")
+                .build()
+                .unwrap();
             PageBuilder::new(slug, "Title", "Label", 1)
                 .chart(ChartSpecBuilder::hbar("C", "d", cfg).at(0, 0, 1).build())
                 .build()
@@ -454,7 +478,7 @@ mod tests {
     }
 }
 
-/// Configure the vendored Python so PyO3 can find the interpreter, standard
+/// Configure the vendored Python so `PyO3` can find the interpreter, standard
 /// library, and installed packages.
 ///
 /// This is called automatically by [`render_dashboard`] and
@@ -464,12 +488,10 @@ mod tests {
 pub fn configure_vendored_python() {
     let exe_dir = std::env::current_exe()
         .ok()
-        .and_then(|p| p.parent().map(|d| d.to_path_buf()));
+        .and_then(|p| p.parent().map(std::path::Path::to_path_buf));
 
     let candidates = [
-        exe_dir
-            .as_ref()
-            .map(|d| d.join("../../vendor/python")),
+        exe_dir.as_ref().map(|d| d.join("../../vendor/python")),
         exe_dir.as_ref().map(|d| d.join("vendor/python")),
         Some(std::path::PathBuf::from("vendor/python")),
     ];

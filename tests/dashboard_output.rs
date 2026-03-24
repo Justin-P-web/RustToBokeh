@@ -246,7 +246,11 @@ fn multi_page_dashboard_creates_one_file_per_page() {
             .unwrap();
         dash.add_page(
             PageBuilder::new(slug, slug, slug, 1)
-                .chart(ChartSpecBuilder::hbar("Chart", "data", cfg).at(0, 0, 1).build())
+                .chart(
+                    ChartSpecBuilder::hbar("Chart", "data", cfg)
+                        .at(0, 0, 1)
+                        .build(),
+                )
                 .build()
                 .unwrap(),
         );
@@ -290,8 +294,14 @@ fn multi_page_nav_links_reference_other_pages() {
     let alpha_html = std::fs::read_to_string(tmp.path().join("alpha.html")).unwrap();
     let beta_html = std::fs::read_to_string(tmp.path().join("beta.html")).unwrap();
 
-    assert!(alpha_html.contains("beta"), "alpha.html should link to beta page");
-    assert!(beta_html.contains("alpha"), "beta.html should link to alpha page");
+    assert!(
+        alpha_html.contains("beta"),
+        "alpha.html should link to beta page"
+    );
+    assert!(
+        beta_html.contains("alpha"),
+        "beta.html should link to alpha page"
+    );
 }
 
 // ── output directory configuration ───────────────────────────────────────────
@@ -327,7 +337,10 @@ fn output_dir_created_automatically() {
     );
     dash.render().unwrap();
 
-    assert!(out.join("p.html").exists(), "HTML should be created in the nested output dir");
+    assert!(
+        out.join("p.html").exists(),
+        "HTML should be created in the nested output dir"
+    );
 }
 
 #[test]
@@ -397,7 +410,14 @@ fn page_with_range_filter_creates_html() {
                 .filtered()
                 .build(),
             )
-            .filter(FilterSpec::range("data", "value", "Value Range", 0.0, 50.0, 1.0))
+            .filter(FilterSpec::range(
+                "data",
+                "value",
+                "Value Range",
+                0.0,
+                50.0,
+                1.0,
+            ))
             .build()
             .unwrap(),
     );
@@ -601,7 +621,11 @@ fn categorised_pages_all_created() {
     let mut dash = Dashboard::new().output_dir(&out);
     dash.add_df("data", &mut df).unwrap();
 
-    for (slug, cat) in &[("fin-one", "Finance"), ("fin-two", "Finance"), ("ops-one", "Ops")] {
+    for (slug, cat) in &[
+        ("fin-one", "Finance"),
+        ("fin-two", "Finance"),
+        ("ops-one", "Ops"),
+    ] {
         let cfg = HBarConfig::builder()
             .category("category")
             .value("value")

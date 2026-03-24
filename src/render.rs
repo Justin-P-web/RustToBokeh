@@ -15,7 +15,7 @@ use std::ffi::CString;
 /// Render a multi-page Bokeh dashboard to HTML files.
 ///
 /// This is the lower-level rendering function. It takes pre-serialized
-/// DataFrames (Arrow IPC bytes keyed by name), page definitions, and an
+/// `DataFrames` (Arrow IPC bytes keyed by name), page definitions, and an
 /// output directory. Each page produces one HTML file with inter-page
 /// navigation.
 ///
@@ -25,7 +25,7 @@ use std::ffi::CString;
 /// # Arguments
 ///
 /// * `frame_data` — Slice of `(key, bytes)` pairs where each `bytes` is a
-///   Polars DataFrame serialized to Arrow IPC format via [`serialize_df`](crate::serialize_df).
+///   Polars `DataFrame` serialized to Arrow IPC format via [`serialize_df`](crate::serialize_df).
 /// * `pages` — Slice of [`Page`] definitions describing the modules and
 ///   filters for each output HTML file.
 /// * `output_dir` — Directory path where HTML files will be written. Created
@@ -36,6 +36,7 @@ use std::ffi::CString;
 /// Returns [`ChartError::InvalidScript`] if the embedded Python script
 /// contains a null byte, or [`ChartError::Python`] if the Python script
 /// raises an exception during execution.
+#[allow(clippy::too_many_lines)]
 pub fn render_dashboard(
     frame_data: &[(&str, Vec<u8>)],
     pages: &[Page],
@@ -212,7 +213,11 @@ pub fn render_dashboard(
         let code = CString::new(python_script).map_err(|_| ChartError::InvalidScript)?;
         py.run(code.as_c_str(), Some(&locals), Some(&locals))?;
 
-        println!("Dashboard generated: {} pages in {}/", pages.len(), output_dir);
+        println!(
+            "Dashboard generated: {} pages in {}/",
+            pages.len(),
+            output_dir
+        );
         Ok(())
     })
 }

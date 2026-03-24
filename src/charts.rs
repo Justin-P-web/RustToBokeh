@@ -48,7 +48,7 @@ pub const MAX_GRID_COLS: usize = 6;
 ///
 /// Grouped bar charts display vertical bars organized by a categorical X axis,
 /// with bars within each group distinguished by a grouping column. The
-/// DataFrame must contain three columns: one for the X-axis categories, one
+/// `DataFrame` must contain three columns: one for the X-axis categories, one
 /// for the group within each category, and one for the numeric value.
 ///
 /// # Example
@@ -87,6 +87,7 @@ pub struct GroupedBarConfigBuilder {
 
 impl GroupedBarConfig {
     /// Create a new builder for a grouped bar chart configuration.
+    #[must_use]
     pub fn builder() -> GroupedBarConfigBuilder {
         GroupedBarConfigBuilder {
             x_col: None,
@@ -99,20 +100,44 @@ impl GroupedBarConfig {
 
 impl GroupedBarConfigBuilder {
     /// Set the X-axis category column name.
-    pub fn x(mut self, col: &str) -> Self { self.x_col = Some(col.into()); self }
+    #[must_use] 
+    pub fn x(mut self, col: &str) -> Self {
+        self.x_col = Some(col.into());
+        self
+    }
     /// Set the grouping column name.
-    pub fn group(mut self, col: &str) -> Self { self.group_col = Some(col.into()); self }
+    #[must_use] 
+    pub fn group(mut self, col: &str) -> Self {
+        self.group_col = Some(col.into());
+        self
+    }
     /// Set the numeric value column name.
-    pub fn value(mut self, col: &str) -> Self { self.value_col = Some(col.into()); self }
+    #[must_use] 
+    pub fn value(mut self, col: &str) -> Self {
+        self.value_col = Some(col.into());
+        self
+    }
     /// Set the Y-axis label text.
-    pub fn y_label(mut self, label: &str) -> Self { self.y_label = Some(label.into()); self }
+    #[must_use] 
+    pub fn y_label(mut self, label: &str) -> Self {
+        self.y_label = Some(label.into());
+        self
+    }
 
     /// Build the config, returning an error if any required field is missing.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`ChartError::MissingField`] if any required field was not set.
     pub fn build(self) -> Result<GroupedBarConfig, ChartError> {
         Ok(GroupedBarConfig {
             x_col: self.x_col.ok_or(ChartError::MissingField("x_col"))?,
-            group_col: self.group_col.ok_or(ChartError::MissingField("group_col"))?,
-            value_col: self.value_col.ok_or(ChartError::MissingField("value_col"))?,
+            group_col: self
+                .group_col
+                .ok_or(ChartError::MissingField("group_col"))?,
+            value_col: self
+                .value_col
+                .ok_or(ChartError::MissingField("value_col"))?,
             y_label: self.y_label.ok_or(ChartError::MissingField("y_label"))?,
         })
     }
@@ -160,6 +185,7 @@ pub struct LineConfigBuilder {
 
 impl LineConfig {
     /// Create a new builder for a line chart configuration.
+    #[must_use] 
     pub fn builder() -> LineConfigBuilder {
         LineConfigBuilder {
             x_col: None,
@@ -171,16 +197,29 @@ impl LineConfig {
 
 impl LineConfigBuilder {
     /// Set the X-axis column name.
-    pub fn x(mut self, col: &str) -> Self { self.x_col = Some(col.into()); self }
+    #[must_use] 
+    pub fn x(mut self, col: &str) -> Self {
+        self.x_col = Some(col.into());
+        self
+    }
     /// Set the Y-axis column names. Each column becomes a separate line.
+    #[must_use] 
     pub fn y_cols(mut self, cols: &[&str]) -> Self {
         self.y_cols = Some(cols.iter().map(|&s| s.into()).collect());
         self
     }
     /// Set the Y-axis label text.
-    pub fn y_label(mut self, label: &str) -> Self { self.y_label = Some(label.into()); self }
+    #[must_use] 
+    pub fn y_label(mut self, label: &str) -> Self {
+        self.y_label = Some(label.into());
+        self
+    }
 
     /// Build the config, returning an error if any required field is missing.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`ChartError::MissingField`] if any required field was not set.
     pub fn build(self) -> Result<LineConfig, ChartError> {
         Ok(LineConfig {
             x_col: self.x_col.ok_or(ChartError::MissingField("x_col"))?,
@@ -230,6 +269,7 @@ pub struct HBarConfigBuilder {
 
 impl HBarConfig {
     /// Create a new builder for a horizontal bar chart configuration.
+    #[must_use] 
     pub fn builder() -> HBarConfigBuilder {
         HBarConfigBuilder {
             category_col: None,
@@ -241,17 +281,37 @@ impl HBarConfig {
 
 impl HBarConfigBuilder {
     /// Set the category column name.
-    pub fn category(mut self, col: &str) -> Self { self.category_col = Some(col.into()); self }
+    #[must_use] 
+    pub fn category(mut self, col: &str) -> Self {
+        self.category_col = Some(col.into());
+        self
+    }
     /// Set the numeric value column name.
-    pub fn value(mut self, col: &str) -> Self { self.value_col = Some(col.into()); self }
+    #[must_use] 
+    pub fn value(mut self, col: &str) -> Self {
+        self.value_col = Some(col.into());
+        self
+    }
     /// Set the X-axis label text.
-    pub fn x_label(mut self, label: &str) -> Self { self.x_label = Some(label.into()); self }
+    #[must_use] 
+    pub fn x_label(mut self, label: &str) -> Self {
+        self.x_label = Some(label.into());
+        self
+    }
 
     /// Build the config, returning an error if any required field is missing.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`ChartError::MissingField`] if any required field was not set.
     pub fn build(self) -> Result<HBarConfig, ChartError> {
         Ok(HBarConfig {
-            category_col: self.category_col.ok_or(ChartError::MissingField("category_col"))?,
-            value_col: self.value_col.ok_or(ChartError::MissingField("value_col"))?,
+            category_col: self
+                .category_col
+                .ok_or(ChartError::MissingField("category_col"))?,
+            value_col: self
+                .value_col
+                .ok_or(ChartError::MissingField("value_col"))?,
             x_label: self.x_label.ok_or(ChartError::MissingField("x_label"))?,
         })
     }
@@ -302,6 +362,7 @@ pub struct ScatterConfigBuilder {
 
 impl ScatterConfig {
     /// Create a new builder for a scatter plot configuration.
+    #[must_use] 
     pub fn builder() -> ScatterConfigBuilder {
         ScatterConfigBuilder {
             x_col: None,
@@ -314,15 +375,35 @@ impl ScatterConfig {
 
 impl ScatterConfigBuilder {
     /// Set the X-axis value column name.
-    pub fn x(mut self, col: &str) -> Self { self.x_col = Some(col.into()); self }
+    #[must_use] 
+    pub fn x(mut self, col: &str) -> Self {
+        self.x_col = Some(col.into());
+        self
+    }
     /// Set the Y-axis value column name.
-    pub fn y(mut self, col: &str) -> Self { self.y_col = Some(col.into()); self }
+    #[must_use] 
+    pub fn y(mut self, col: &str) -> Self {
+        self.y_col = Some(col.into());
+        self
+    }
     /// Set the X-axis label text.
-    pub fn x_label(mut self, label: &str) -> Self { self.x_label = Some(label.into()); self }
+    #[must_use] 
+    pub fn x_label(mut self, label: &str) -> Self {
+        self.x_label = Some(label.into());
+        self
+    }
     /// Set the Y-axis label text.
-    pub fn y_label(mut self, label: &str) -> Self { self.y_label = Some(label.into()); self }
+    #[must_use] 
+    pub fn y_label(mut self, label: &str) -> Self {
+        self.y_label = Some(label.into());
+        self
+    }
 
     /// Build the config, returning an error if any required field is missing.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`ChartError::MissingField`] if any required field was not set.
     pub fn build(self) -> Result<ScatterConfig, ChartError> {
         Ok(ScatterConfig {
             x_col: self.x_col.ok_or(ChartError::MissingField("x_col"))?,
@@ -356,6 +437,7 @@ pub enum ChartConfig {
 impl ChartConfig {
     /// Return the string identifier used by the Python renderer to dispatch
     /// chart construction (e.g. `"grouped_bar"`, `"line_multi"`).
+    #[must_use] 
     pub fn chart_type_str(&self) -> &'static str {
         match self {
             ChartConfig::GroupedBar(_) => "grouped_bar",
@@ -390,7 +472,7 @@ pub struct GridCell {
 pub struct ChartSpec {
     /// Display title rendered above the chart.
     pub title: String,
-    /// Key into the frames dictionary identifying which DataFrame to use.
+    /// Key into the frames dictionary identifying which `DataFrame` to use.
     /// Must match a key registered with [`Dashboard::add_df`](crate::Dashboard::add_df).
     pub source_key: String,
     /// Typed chart configuration (bar, line, hbar, or scatter).
@@ -510,32 +592,41 @@ impl ChartSpecBuilder {
     ///
     /// Prefer the typed constructors ([`bar`](Self::bar), [`line`](Self::line),
     /// etc.) for a more ergonomic API.
+    #[must_use] 
     pub fn new(title: &str, source_key: &str, config: ChartConfig) -> Self {
         Self {
             title: title.into(),
             source_key: source_key.into(),
             config,
-            grid: GridCell { row: 0, col: 0, col_span: 1 },
+            grid: GridCell {
+                row: 0,
+                col: 0,
+                col_span: 1,
+            },
             filtered: false,
         }
     }
 
     /// Create a grouped bar chart spec.
+    #[must_use] 
     pub fn bar(title: &str, key: &str, config: GroupedBarConfig) -> Self {
         Self::new(title, key, ChartConfig::GroupedBar(config))
     }
 
     /// Create a multi-line chart spec.
+    #[must_use] 
     pub fn line(title: &str, key: &str, config: LineConfig) -> Self {
         Self::new(title, key, ChartConfig::Line(config))
     }
 
     /// Create a horizontal bar chart spec.
+    #[must_use] 
     pub fn hbar(title: &str, key: &str, config: HBarConfig) -> Self {
         Self::new(title, key, ChartConfig::HBar(config))
     }
 
     /// Create a scatter plot spec.
+    #[must_use] 
     pub fn scatter(title: &str, key: &str, config: ScatterConfig) -> Self {
         Self::new(title, key, ChartConfig::Scatter(config))
     }
@@ -545,8 +636,13 @@ impl ChartSpecBuilder {
     /// `row` and `col` are zero-based indices into the page grid. `span`
     /// controls how many columns this chart occupies (e.g. `2` for full-width
     /// on a 2-column grid).
+    #[must_use] 
     pub fn at(mut self, row: usize, col: usize, span: usize) -> Self {
-        self.grid = GridCell { row, col, col_span: span };
+        self.grid = GridCell {
+            row,
+            col,
+            col_span: span,
+        };
         self
     }
 
@@ -555,12 +651,14 @@ impl ChartSpecBuilder {
     /// Only charts with the same `source_key` as a page's [`FilterSpec`]s
     /// will be affected. Charts that are not marked as filtered will display
     /// all data regardless of filter state.
+    #[must_use] 
     pub fn filtered(mut self) -> Self {
         self.filtered = true;
         self
     }
 
     /// Consume the builder and produce a [`ChartSpec`].
+    #[must_use] 
     pub fn build(self) -> ChartSpec {
         ChartSpec {
             title: self.title,
@@ -580,9 +678,21 @@ impl FilterSpec {
     /// Produces a `RangeSlider` widget that filters rows where the column
     /// value falls within the selected `[min, max]` range. The slider moves
     /// in increments of `step`.
-    pub fn range(source_key: &str, column: &str, label: &str, min: f64, max: f64, step: f64) -> Self {
-        Self { source_key: source_key.into(), column: column.into(), label: label.into(),
-               config: FilterConfig::Range { min, max, step } }
+    #[must_use] 
+    pub fn range(
+        source_key: &str,
+        column: &str,
+        label: &str,
+        min: f64,
+        max: f64,
+        step: f64,
+    ) -> Self {
+        Self {
+            source_key: source_key.into(),
+            column: column.into(),
+            label: label.into(),
+            config: FilterConfig::Range { min, max, step },
+        }
     }
 
     /// Create a dropdown select filter with an "All" option.
@@ -591,8 +701,14 @@ impl FilterSpec {
     /// top. Selecting "All" removes the filter; selecting a specific value
     /// keeps only rows matching that value.
     pub fn select(source_key: &str, column: &str, label: &str, options: Vec<&str>) -> Self {
-        Self { source_key: source_key.into(), column: column.into(), label: label.into(),
-               config: FilterConfig::Select { options: options.into_iter().map(Into::into).collect() } }
+        Self {
+            source_key: source_key.into(),
+            column: column.into(),
+            label: label.into(),
+            config: FilterConfig::Select {
+                options: options.into_iter().map(Into::into).collect(),
+            },
+        }
     }
 
     /// Create a group filter (dropdown without an "All" option).
@@ -600,8 +716,14 @@ impl FilterSpec {
     /// Uses Bokeh's `GroupFilter` to show only rows belonging to the selected
     /// group. The first option is selected by default.
     pub fn group(source_key: &str, column: &str, label: &str, options: Vec<&str>) -> Self {
-        Self { source_key: source_key.into(), column: column.into(), label: label.into(),
-               config: FilterConfig::Group { options: options.into_iter().map(Into::into).collect() } }
+        Self {
+            source_key: source_key.into(),
+            column: column.into(),
+            label: label.into(),
+            config: FilterConfig::Group {
+                options: options.into_iter().map(Into::into).collect(),
+            },
+        }
     }
 
     /// Create a threshold toggle filter.
@@ -609,9 +731,14 @@ impl FilterSpec {
     /// Produces a `Switch` widget. When toggled on, rows are filtered based
     /// on whether the column value is above (`above = true`) or below
     /// (`above = false`) the given `value`.
+    #[must_use] 
     pub fn threshold(source_key: &str, column: &str, label: &str, value: f64, above: bool) -> Self {
-        Self { source_key: source_key.into(), column: column.into(), label: label.into(),
-               config: FilterConfig::Threshold { value, above } }
+        Self {
+            source_key: source_key.into(),
+            column: column.into(),
+            label: label.into(),
+            config: FilterConfig::Threshold { value, above },
+        }
     }
 
     /// Create a top-N slider filter.
@@ -620,9 +747,20 @@ impl FilterSpec {
     /// N rows sorted by the filter's column. `max_n` sets the slider's upper
     /// bound. If `descending` is `true`, the highest values are kept; if
     /// `false`, the lowest.
-    pub fn top_n(source_key: &str, column: &str, label: &str, max_n: usize, descending: bool) -> Self {
-        Self { source_key: source_key.into(), column: column.into(), label: label.into(),
-               config: FilterConfig::TopN { max_n, descending } }
+    #[must_use] 
+    pub fn top_n(
+        source_key: &str,
+        column: &str,
+        label: &str,
+        max_n: usize,
+        descending: bool,
+    ) -> Self {
+        Self {
+            source_key: source_key.into(),
+            column: column.into(),
+            label: label.into(),
+            config: FilterConfig::TopN { max_n, descending },
+        }
     }
 }
 
@@ -635,7 +773,11 @@ mod tests {
     #[test]
     fn grouped_bar_missing_x_col() {
         assert!(matches!(
-            GroupedBarConfig::builder().group("g").value("v").y_label("Y").build(),
+            GroupedBarConfig::builder()
+                .group("g")
+                .value("v")
+                .y_label("Y")
+                .build(),
             Err(ChartError::MissingField("x_col"))
         ));
     }
@@ -643,7 +785,11 @@ mod tests {
     #[test]
     fn grouped_bar_missing_group_col() {
         assert!(matches!(
-            GroupedBarConfig::builder().x("x").value("v").y_label("Y").build(),
+            GroupedBarConfig::builder()
+                .x("x")
+                .value("v")
+                .y_label("Y")
+                .build(),
             Err(ChartError::MissingField("group_col"))
         ));
     }
@@ -651,7 +797,11 @@ mod tests {
     #[test]
     fn grouped_bar_missing_value_col() {
         assert!(matches!(
-            GroupedBarConfig::builder().x("x").group("g").y_label("Y").build(),
+            GroupedBarConfig::builder()
+                .x("x")
+                .group("g")
+                .y_label("Y")
+                .build(),
             Err(ChartError::MissingField("value_col"))
         ));
     }
@@ -659,7 +809,11 @@ mod tests {
     #[test]
     fn grouped_bar_missing_y_label() {
         assert!(matches!(
-            GroupedBarConfig::builder().x("x").group("g").value("v").build(),
+            GroupedBarConfig::builder()
+                .x("x")
+                .group("g")
+                .value("v")
+                .build(),
             Err(ChartError::MissingField("y_label"))
         ));
     }
@@ -667,8 +821,12 @@ mod tests {
     #[test]
     fn grouped_bar_build_success() {
         let cfg = GroupedBarConfig::builder()
-            .x("month").group("category").value("revenue").y_label("USD")
-            .build().unwrap();
+            .x("month")
+            .group("category")
+            .value("revenue")
+            .y_label("USD")
+            .build()
+            .unwrap();
         assert_eq!(cfg.x_col, "month");
         assert_eq!(cfg.group_col, "category");
         assert_eq!(cfg.value_col, "revenue");
@@ -704,8 +862,11 @@ mod tests {
     #[test]
     fn line_build_success() {
         let cfg = LineConfig::builder()
-            .x("month").y_cols(&["rev", "exp"]).y_label("USD")
-            .build().unwrap();
+            .x("month")
+            .y_cols(&["rev", "exp"])
+            .y_label("USD")
+            .build()
+            .unwrap();
         assert_eq!(cfg.x_col, "month");
         assert_eq!(cfg.y_cols, vec!["rev".to_string(), "exp".to_string()]);
         assert_eq!(cfg.y_label, "USD");
@@ -740,8 +901,11 @@ mod tests {
     #[test]
     fn hbar_build_success() {
         let cfg = HBarConfig::builder()
-            .category("dept").value("headcount").x_label("Employees")
-            .build().unwrap();
+            .category("dept")
+            .value("headcount")
+            .x_label("Employees")
+            .build()
+            .unwrap();
         assert_eq!(cfg.category_col, "dept");
         assert_eq!(cfg.value_col, "headcount");
         assert_eq!(cfg.x_label, "Employees");
@@ -752,7 +916,11 @@ mod tests {
     #[test]
     fn scatter_missing_x_col() {
         assert!(matches!(
-            ScatterConfig::builder().y("y").x_label("X").y_label("Y").build(),
+            ScatterConfig::builder()
+                .y("y")
+                .x_label("X")
+                .y_label("Y")
+                .build(),
             Err(ChartError::MissingField("x_col"))
         ));
     }
@@ -760,7 +928,11 @@ mod tests {
     #[test]
     fn scatter_missing_y_col() {
         assert!(matches!(
-            ScatterConfig::builder().x("x").x_label("X").y_label("Y").build(),
+            ScatterConfig::builder()
+                .x("x")
+                .x_label("X")
+                .y_label("Y")
+                .build(),
             Err(ChartError::MissingField("y_col"))
         ));
     }
@@ -784,8 +956,12 @@ mod tests {
     #[test]
     fn scatter_build_success() {
         let cfg = ScatterConfig::builder()
-            .x("revenue").y("profit").x_label("Revenue").y_label("Profit")
-            .build().unwrap();
+            .x("revenue")
+            .y("profit")
+            .x_label("Revenue")
+            .y_label("Profit")
+            .build()
+            .unwrap();
         assert_eq!(cfg.x_col, "revenue");
         assert_eq!(cfg.y_col, "profit");
         assert_eq!(cfg.x_label, "Revenue");
@@ -796,29 +972,55 @@ mod tests {
 
     #[test]
     fn chart_type_str_grouped_bar() {
-        let cfg = ChartConfig::GroupedBar(GroupedBarConfig::builder()
-            .x("x").group("g").value("v").y_label("Y").build().unwrap());
+        let cfg = ChartConfig::GroupedBar(
+            GroupedBarConfig::builder()
+                .x("x")
+                .group("g")
+                .value("v")
+                .y_label("Y")
+                .build()
+                .unwrap(),
+        );
         assert_eq!(cfg.chart_type_str(), "grouped_bar");
     }
 
     #[test]
     fn chart_type_str_line() {
-        let cfg = ChartConfig::Line(LineConfig::builder()
-            .x("x").y_cols(&["a"]).y_label("Y").build().unwrap());
+        let cfg = ChartConfig::Line(
+            LineConfig::builder()
+                .x("x")
+                .y_cols(&["a"])
+                .y_label("Y")
+                .build()
+                .unwrap(),
+        );
         assert_eq!(cfg.chart_type_str(), "line_multi");
     }
 
     #[test]
     fn chart_type_str_hbar() {
-        let cfg = ChartConfig::HBar(HBarConfig::builder()
-            .category("c").value("v").x_label("X").build().unwrap());
+        let cfg = ChartConfig::HBar(
+            HBarConfig::builder()
+                .category("c")
+                .value("v")
+                .x_label("X")
+                .build()
+                .unwrap(),
+        );
         assert_eq!(cfg.chart_type_str(), "hbar");
     }
 
     #[test]
     fn chart_type_str_scatter() {
-        let cfg = ChartConfig::Scatter(ScatterConfig::builder()
-            .x("x").y("y").x_label("X").y_label("Y").build().unwrap());
+        let cfg = ChartConfig::Scatter(
+            ScatterConfig::builder()
+                .x("x")
+                .y("y")
+                .x_label("X")
+                .y_label("Y")
+                .build()
+                .unwrap(),
+        );
         assert_eq!(cfg.chart_type_str(), "scatter");
     }
 
@@ -827,7 +1029,11 @@ mod tests {
     #[test]
     fn chart_spec_builder_defaults() {
         let cfg = HBarConfig::builder()
-            .category("c").value("v").x_label("X").build().unwrap();
+            .category("c")
+            .value("v")
+            .x_label("X")
+            .build()
+            .unwrap();
         let spec = ChartSpecBuilder::hbar("My Chart", "my_data", cfg).build();
         assert_eq!(spec.title, "My Chart");
         assert_eq!(spec.source_key, "my_data");
@@ -840,8 +1046,14 @@ mod tests {
     #[test]
     fn chart_spec_builder_at_sets_grid() {
         let cfg = HBarConfig::builder()
-            .category("c").value("v").x_label("X").build().unwrap();
-        let spec = ChartSpecBuilder::hbar("Chart", "data", cfg).at(2, 1, 3).build();
+            .category("c")
+            .value("v")
+            .x_label("X")
+            .build()
+            .unwrap();
+        let spec = ChartSpecBuilder::hbar("Chart", "data", cfg)
+            .at(2, 1, 3)
+            .build();
         assert_eq!(spec.grid.row, 2);
         assert_eq!(spec.grid.col, 1);
         assert_eq!(spec.grid.col_span, 3);
@@ -850,15 +1062,26 @@ mod tests {
     #[test]
     fn chart_spec_builder_filtered_flag() {
         let cfg = HBarConfig::builder()
-            .category("c").value("v").x_label("X").build().unwrap();
-        let spec = ChartSpecBuilder::hbar("Chart", "data", cfg).filtered().build();
+            .category("c")
+            .value("v")
+            .x_label("X")
+            .build()
+            .unwrap();
+        let spec = ChartSpecBuilder::hbar("Chart", "data", cfg)
+            .filtered()
+            .build();
         assert!(spec.filtered);
     }
 
     #[test]
     fn chart_spec_builder_bar_constructor() {
         let cfg = GroupedBarConfig::builder()
-            .x("x").group("g").value("v").y_label("Y").build().unwrap();
+            .x("x")
+            .group("g")
+            .value("v")
+            .y_label("Y")
+            .build()
+            .unwrap();
         let spec = ChartSpecBuilder::bar("Bar Chart", "src", cfg).build();
         assert_eq!(spec.config.chart_type_str(), "grouped_bar");
     }
@@ -866,7 +1089,11 @@ mod tests {
     #[test]
     fn chart_spec_builder_line_constructor() {
         let cfg = LineConfig::builder()
-            .x("x").y_cols(&["a"]).y_label("Y").build().unwrap();
+            .x("x")
+            .y_cols(&["a"])
+            .y_label("Y")
+            .build()
+            .unwrap();
         let spec = ChartSpecBuilder::line("Line Chart", "src", cfg).build();
         assert_eq!(spec.config.chart_type_str(), "line_multi");
     }
@@ -874,7 +1101,12 @@ mod tests {
     #[test]
     fn chart_spec_builder_scatter_constructor() {
         let cfg = ScatterConfig::builder()
-            .x("x").y("y").x_label("X").y_label("Y").build().unwrap();
+            .x("x")
+            .y("y")
+            .x_label("X")
+            .y_label("Y")
+            .build()
+            .unwrap();
         let spec = ChartSpecBuilder::scatter("Scatter", "src", cfg).build();
         assert_eq!(spec.config.chart_type_str(), "scatter");
     }

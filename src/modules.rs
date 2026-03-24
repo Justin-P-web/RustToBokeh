@@ -30,7 +30,7 @@ pub enum PageModule {
     Chart(ChartSpec),
     /// A styled text block with optional heading.
     Paragraph(ParagraphSpec),
-    /// A formatted data table rendered from a registered DataFrame.
+    /// A formatted data table rendered from a registered `DataFrame`.
     Table(TableSpec),
 }
 
@@ -77,17 +77,24 @@ impl ParagraphSpec {
     /// Create a builder for a paragraph module with the given body text.
     ///
     /// The text may contain multiple paragraphs separated by `"\n\n"`.
+    #[must_use]
+    #[allow(clippy::new_ret_no_self)]
     pub fn new(text: &str) -> ParagraphSpecBuilder {
         ParagraphSpecBuilder {
             title: None,
             text: text.into(),
-            grid: GridCell { row: 0, col: 0, col_span: 1 },
+            grid: GridCell {
+                row: 0,
+                col: 0,
+                col_span: 1,
+            },
         }
     }
 }
 
 impl ParagraphSpecBuilder {
     /// Set an optional heading displayed above the paragraph text.
+    #[must_use]
     pub fn title(mut self, title: &str) -> Self {
         self.title = Some(title.into());
         self
@@ -97,12 +104,18 @@ impl ParagraphSpecBuilder {
     ///
     /// `row` and `col` are zero-based. `span` controls how many grid columns
     /// this module occupies.
+    #[must_use]
     pub fn at(mut self, row: usize, col: usize, span: usize) -> Self {
-        self.grid = GridCell { row, col, col_span: span };
+        self.grid = GridCell {
+            row,
+            col,
+            col_span: span,
+        };
         self
     }
 
     /// Consume the builder and produce a [`ParagraphSpec`].
+    #[must_use]
     pub fn build(self) -> ParagraphSpec {
         ParagraphSpec {
             title: self.title,
@@ -140,7 +153,7 @@ pub enum ColumnFormat {
 /// [`currency`](Self::currency), [`percent`](Self::percent)) to create
 /// column definitions with the appropriate format.
 pub struct TableColumn {
-    /// Column name in the source DataFrame.
+    /// Column name in the source `DataFrame`.
     pub key: String,
     /// Header label displayed in the table.
     pub label: String,
@@ -150,8 +163,13 @@ pub struct TableColumn {
 
 impl TableColumn {
     /// Plain text column — values rendered with string conversion.
+    #[must_use]
     pub fn text(key: &str, label: &str) -> Self {
-        Self { key: key.into(), label: label.into(), format: ColumnFormat::Text }
+        Self {
+            key: key.into(),
+            label: label.into(),
+            format: ColumnFormat::Text,
+        }
     }
 
     /// Fixed-point number column.
@@ -161,8 +179,13 @@ impl TableColumn {
     /// ```ignore
     /// TableColumn::number("score", "Score", 2)  // 3.14159 → "3.14"
     /// ```
+    #[must_use]
     pub fn number(key: &str, label: &str, decimals: u32) -> Self {
-        Self { key: key.into(), label: label.into(), format: ColumnFormat::Number { decimals } }
+        Self {
+            key: key.into(),
+            label: label.into(),
+            format: ColumnFormat::Number { decimals },
+        }
     }
 
     /// Currency column with a prefix symbol and thousands separator.
@@ -172,11 +195,15 @@ impl TableColumn {
     /// ```ignore
     /// TableColumn::currency("revenue", "Revenue", "$", 0)  // 1234567 → "$1,234,567"
     /// ```
+    #[must_use]
     pub fn currency(key: &str, label: &str, symbol: &str, decimals: u32) -> Self {
         Self {
             key: key.into(),
             label: label.into(),
-            format: ColumnFormat::Currency { symbol: symbol.into(), decimals },
+            format: ColumnFormat::Currency {
+                symbol: symbol.into(),
+                decimals,
+            },
         }
     }
 
@@ -187,14 +214,19 @@ impl TableColumn {
     /// ```ignore
     /// TableColumn::percent("margin", "Margin %", 1)  // 28.456 → "28.5%"
     /// ```
+    #[must_use]
     pub fn percent(key: &str, label: &str, decimals: u32) -> Self {
-        Self { key: key.into(), label: label.into(), format: ColumnFormat::Percent { decimals } }
+        Self {
+            key: key.into(),
+            label: label.into(),
+            format: ColumnFormat::Percent { decimals },
+        }
     }
 }
 
 // ── TableSpec ─────────────────────────────────────────────────────────────────
 
-/// A formatted data table rendered from a registered DataFrame.
+/// A formatted data table rendered from a registered `DataFrame`.
 ///
 /// The table displays selected columns in the order they are added, with
 /// per-column formatting applied to each cell value.
@@ -214,7 +246,7 @@ impl TableColumn {
 pub struct TableSpec {
     /// Heading displayed above the table.
     pub title: String,
-    /// Key into the frames dictionary identifying which DataFrame to display.
+    /// Key into the frames dictionary identifying which `DataFrame` to display.
     /// Must match a key registered with [`Dashboard::add_df`](crate::Dashboard::add_df).
     pub source_key: String,
     /// Columns to include in the table, in display order.
@@ -239,14 +271,20 @@ impl TableSpec {
     /// # Arguments
     ///
     /// * `title` — Heading displayed above the table.
-    /// * `source_key` — Key of the DataFrame registered with
+    /// * `source_key` — Key of the `DataFrame` registered with
     ///   [`Dashboard::add_df`](crate::Dashboard::add_df).
+    #[must_use]
+    #[allow(clippy::new_ret_no_self)]
     pub fn new(title: &str, source_key: &str) -> TableSpecBuilder {
         TableSpecBuilder {
             title: title.into(),
             source_key: source_key.into(),
             columns: Vec::new(),
-            grid: GridCell { row: 0, col: 0, col_span: 1 },
+            grid: GridCell {
+                row: 0,
+                col: 0,
+                col_span: 1,
+            },
         }
     }
 }
@@ -255,6 +293,7 @@ impl TableSpecBuilder {
     /// Add a column to the table.
     ///
     /// Columns are displayed in the order they are added.
+    #[must_use]
     pub fn column(mut self, col: TableColumn) -> Self {
         self.columns.push(col);
         self
@@ -264,12 +303,18 @@ impl TableSpecBuilder {
     ///
     /// `row` and `col` are zero-based. `span` controls how many grid columns
     /// this module occupies.
+    #[must_use] 
     pub fn at(mut self, row: usize, col: usize, span: usize) -> Self {
-        self.grid = GridCell { row, col, col_span: span };
+        self.grid = GridCell {
+            row,
+            col,
+            col_span: span,
+        };
         self
     }
 
     /// Consume the builder and produce a [`TableSpec`].
+    #[must_use] 
     pub fn build(self) -> TableSpec {
         TableSpec {
             title: self.title,
@@ -397,7 +442,11 @@ mod tests {
     fn page_module_chart_wraps_spec() {
         use crate::charts::{ChartSpecBuilder, HBarConfig};
         let cfg = HBarConfig::builder()
-            .category("c").value("v").x_label("X").build().unwrap();
+            .category("c")
+            .value("v")
+            .x_label("X")
+            .build()
+            .unwrap();
         let spec = ChartSpecBuilder::hbar("Chart", "data", cfg).build();
         let module = PageModule::Chart(spec);
         assert!(matches!(module, PageModule::Chart(_)));

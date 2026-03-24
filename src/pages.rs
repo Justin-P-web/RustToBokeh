@@ -89,6 +89,7 @@ impl PageBuilder {
     /// * `nav_label` — Short label for the navigation bar.
     /// * `grid_cols` — Number of columns in the page's CSS grid layout (1–[`MAX_GRID_COLS`]).
     ///   Modules are positioned within this grid via their `.at()` method.
+    #[must_use] 
     pub fn new(slug: &str, title: &str, nav_label: &str, grid_cols: usize) -> Self {
         Self {
             slug: slug.into(),
@@ -106,6 +107,7 @@ impl PageBuilder {
     /// Pages sharing the same category string are grouped together under that
     /// heading in the navigation bar. This is optional — pages without a
     /// category are shown at the top of the navigation ungrouped.
+    #[must_use] 
     pub fn category(mut self, cat: &str) -> Self {
         self.category = Some(cat.into());
         self
@@ -114,6 +116,7 @@ impl PageBuilder {
     /// Add a chart to this page.
     ///
     /// The spec is wrapped in [`PageModule::Chart`](crate::modules::PageModule::Chart).
+    #[must_use] 
     pub fn chart(mut self, spec: ChartSpec) -> Self {
         self.modules.push(PageModule::Chart(spec));
         self
@@ -122,6 +125,7 @@ impl PageBuilder {
     /// Add a paragraph text block to this page.
     ///
     /// The spec is wrapped in [`PageModule::Paragraph`](crate::modules::PageModule::Paragraph).
+    #[must_use] 
     pub fn paragraph(mut self, spec: ParagraphSpec) -> Self {
         self.modules.push(PageModule::Paragraph(spec));
         self
@@ -130,8 +134,9 @@ impl PageBuilder {
     /// Add a formatted data table to this page.
     ///
     /// The spec is wrapped in [`PageModule::Table`](crate::modules::PageModule::Table).
-    /// The table's `source_key` must reference a DataFrame registered with
+    /// The table's `source_key` must reference a `DataFrame` registered with
     /// [`Dashboard::add_df`](crate::Dashboard::add_df).
+    #[must_use] 
     pub fn table(mut self, spec: TableSpec) -> Self {
         self.modules.push(PageModule::Table(spec));
         self
@@ -144,6 +149,7 @@ impl PageBuilder {
     /// [`filtered`](crate::charts::ChartSpecBuilder::filtered). Multiple
     /// filters on the same source are combined via Bokeh's
     /// `IntersectionFilter`.
+    #[must_use] 
     pub fn filter(mut self, filter: FilterSpec) -> Self {
         self.filters.push(filter);
         self
@@ -176,9 +182,9 @@ impl PageBuilder {
 
         for module in &self.modules {
             let (row, col, span) = match module {
-                PageModule::Chart(s)     => (s.grid.row, s.grid.col, s.grid.col_span),
+                PageModule::Chart(s) => (s.grid.row, s.grid.col, s.grid.col_span),
                 PageModule::Paragraph(s) => (s.grid.row, s.grid.col, s.grid.col_span),
-                PageModule::Table(s)     => (s.grid.row, s.grid.col, s.grid.col_span),
+                PageModule::Table(s) => (s.grid.row, s.grid.col, s.grid.col_span),
             };
 
             if span == 0 {
@@ -234,13 +240,19 @@ impl PageBuilder {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::charts::{ChartSpecBuilder, HBarConfig, FilterSpec};
-    use crate::modules::{ParagraphSpec, TableSpec, TableColumn};
+    use crate::charts::{ChartSpecBuilder, FilterSpec, HBarConfig};
+    use crate::modules::{ParagraphSpec, TableColumn, TableSpec};
 
     fn hbar_spec(row: usize, col: usize, span: usize) -> ChartSpec {
         let cfg = HBarConfig::builder()
-            .category("c").value("v").x_label("X").build().unwrap();
-        ChartSpecBuilder::hbar("Chart", "data", cfg).at(row, col, span).build()
+            .category("c")
+            .value("v")
+            .x_label("X")
+            .build()
+            .unwrap();
+        ChartSpecBuilder::hbar("Chart", "data", cfg)
+            .at(row, col, span)
+            .build()
     }
 
     // ── Successful builds ─────────────────────────────────────────────────────
@@ -353,7 +365,11 @@ mod tests {
     #[test]
     fn col_span_zero_fails() {
         let cfg = HBarConfig::builder()
-            .category("c").value("v").x_label("X").build().unwrap();
+            .category("c")
+            .value("v")
+            .x_label("X")
+            .build()
+            .unwrap();
         let spec = ChartSpecBuilder::hbar("C", "d", cfg).at(0, 0, 0).build();
         assert!(matches!(
             PageBuilder::new("p", "P", "P", 2).chart(spec).build(),
@@ -365,7 +381,9 @@ mod tests {
     fn col_index_out_of_bounds_fails() {
         // col=2 is out of bounds for a 2-column grid (valid cols are 0, 1)
         assert!(matches!(
-            PageBuilder::new("p", "P", "P", 2).chart(hbar_spec(0, 2, 1)).build(),
+            PageBuilder::new("p", "P", "P", 2)
+                .chart(hbar_spec(0, 2, 1))
+                .build(),
             Err(ChartError::GridValidation(_))
         ));
     }
@@ -374,7 +392,9 @@ mod tests {
     fn col_plus_span_overflow_fails() {
         // col=1, span=2 → col+span=3 overflows a 2-column grid
         assert!(matches!(
-            PageBuilder::new("p", "P", "P", 2).chart(hbar_spec(0, 1, 2)).build(),
+            PageBuilder::new("p", "P", "P", 2)
+                .chart(hbar_spec(0, 1, 2))
+                .build(),
             Err(ChartError::GridValidation(_))
         ));
     }

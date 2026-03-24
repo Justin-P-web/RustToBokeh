@@ -1,0 +1,186 @@
+use polars::prelude::*;
+
+pub fn build_monthly_revenue() -> DataFrame {
+    df![
+        "month" => ["Jan","Jan","Feb","Feb","Mar","Mar","Apr","Apr",
+                     "May","May","Jun","Jun","Jul","Jul","Aug","Aug",
+                     "Sep","Sep","Oct","Oct","Nov","Nov","Dec","Dec"],
+        "category" => ["Revenue","Expenses","Revenue","Expenses","Revenue","Expenses",
+                        "Revenue","Expenses","Revenue","Expenses","Revenue","Expenses",
+                        "Revenue","Expenses","Revenue","Expenses","Revenue","Expenses",
+                        "Revenue","Expenses","Revenue","Expenses","Revenue","Expenses"],
+        "value" => [120.5,95.0, 135.2,102.5, 148.7,110.3, 162.3,118.7,
+                    175.0,125.2, 190.8,132.8, 205.1,140.1, 198.4,136.5,
+                    210.7,145.2, 225.3,152.7, 240.6,160.3, 280.9,175.5f64]
+    ]
+    .expect("monthly_revenue")
+}
+
+pub fn build_quarterly_products() -> DataFrame {
+    df![
+        "quarter" => ["Q1","Q1","Q1","Q1","Q2","Q2","Q2","Q2",
+                       "Q3","Q3","Q3","Q3","Q4","Q4","Q4","Q4"],
+        "product" => ["Alpha","Beta","Gamma","Delta",
+                       "Alpha","Beta","Gamma","Delta",
+                       "Alpha","Beta","Gamma","Delta",
+                       "Alpha","Beta","Gamma","Delta"],
+        "value" => [320.5,210.0,140.3,95.0, 410.2,275.8,165.0,120.5,
+                    390.7,305.3,195.5,145.2, 520.1,380.6,240.9,180.3f64]
+    ]
+    .expect("quarterly_products")
+}
+
+pub fn build_monthly_trends() -> DataFrame {
+    df![
+        "month" => ["Jan","Feb","Mar","Apr","May","Jun",
+                     "Jul","Aug","Sep","Oct","Nov","Dec"],
+        "revenue"  => [120.5,135.2,148.7,162.3,175.0,190.8,205.1,198.4,210.7,225.3,240.6,280.9f64],
+        "expenses" => [95.0,102.5,110.3,118.7,125.2,132.8,140.1,136.5,145.2,152.7,160.3,175.5f64],
+        "profit"   => [25.5,32.7,38.4,43.6,49.8,58.0,65.0,61.9,65.5,72.6,80.3,105.4f64],
+        "margin"   => [21.2,24.2,25.8,26.9,28.5,30.4,31.7,31.2,31.1,32.2,33.4,37.5f64]
+    ]
+    .expect("monthly_trends")
+}
+
+pub fn build_regional_sales() -> DataFrame {
+    df![
+        "region" => ["North","North","North","South","South","South",
+                      "East","East","East","West","West","West",
+                      "Central","Central","Central"],
+        "channel" => ["Online","Retail","Wholesale","Online","Retail","Wholesale",
+                       "Online","Retail","Wholesale","Online","Retail","Wholesale",
+                       "Online","Retail","Wholesale"],
+        "value" => [245.0,180.5,120.3, 198.7,210.0,95.5,
+                    310.2,165.8,140.0, 175.5,195.3,110.8,
+                    220.1,155.6,130.2f64]
+    ]
+    .expect("regional_sales")
+}
+
+pub fn build_dept_headcount() -> DataFrame {
+    df![
+        "department" => ["Engineering","Engineering","Engineering",
+                          "Marketing","Marketing","Marketing",
+                          "Sales","Sales","Sales",
+                          "Support","Support","Support",
+                          "Finance","Finance","Finance",
+                          "Operations","Operations","Operations"],
+        "year" => ["2022","2023","2024","2022","2023","2024",
+                    "2022","2023","2024","2022","2023","2024",
+                    "2022","2023","2024","2022","2023","2024"],
+        "count" => [45i64,62,78, 20,25,30, 35,40,48,
+                    15,18,22, 10,12,14, 25,28,32]
+    ]
+    .expect("dept_headcount")
+}
+
+pub fn build_satisfaction() -> DataFrame {
+    df![
+        "category" => ["Product Quality","Customer Service","Pricing",
+                        "Delivery Speed","Documentation","Onboarding",
+                        "Mobile App","API Reliability"],
+        "score" => [4.5, 4.2, 3.8, 4.0, 3.5, 3.9, 4.3, 4.6f64]
+    ]
+    .expect("satisfaction")
+}
+
+pub fn build_website_traffic() -> DataFrame {
+    df![
+        "month" => ["Jan","Feb","Mar","Apr","May","Jun",
+                     "Jul","Aug","Sep","Oct","Nov","Dec"],
+        "visitors"    => [45000i64,48500,52000,58000,62000,67000,
+                          71000,69000,73000,78000,85000,92000],
+        "signups"     => [1200i64,1350,1500,1800,2100,2400,2600,2450,2700,3000,3400,3800],
+        "conversions" => [320i64,380,420,510,590,680,720,690,750,830,950,1050]
+    ]
+    .expect("website_traffic")
+}
+
+pub fn build_market_share() -> DataFrame {
+    df![
+        "company" => ["Our Company","Competitor A","Competitor B",
+                       "Competitor C","Competitor D","Others"],
+        "share" => [28.5, 22.0, 18.3, 12.7, 8.5, 10.0f64]
+    ]
+    .expect("market_share")
+}
+
+pub fn build_budget_vs_actual() -> DataFrame {
+    df![
+        "department" => ["Engineering","Engineering","Marketing","Marketing",
+                          "Sales","Sales","Support","Support",
+                          "Finance","Finance","Operations","Operations"],
+        "type" => ["Budget","Actual","Budget","Actual",
+                    "Budget","Actual","Budget","Actual",
+                    "Budget","Actual","Budget","Actual"],
+        "amount" => [500.0,480.0, 200.0,220.0, 300.0,310.0,
+                     150.0,140.0, 100.0,95.0, 250.0,235.0f64]
+    ]
+    .expect("budget_vs_actual")
+}
+
+pub fn build_scatter_performance() -> DataFrame {
+    df![
+        "revenue"      => [50.0,75.0,120.0,95.0,200.0,180.0,60.0,140.0,310.0,88.0,
+                           155.0,220.0,45.0,170.0,280.0,110.0,190.0,65.0,240.0,135.0,
+                           300.0,85.0,160.0,210.0,70.0,250.0,100.0,180.0,130.0,270.0f64],
+        "profit"       => [8.0,15.0,30.0,18.0,52.0,42.0,10.0,35.0,85.0,16.0,
+                           38.0,55.0,5.0,40.0,72.0,22.0,48.0,12.0,60.0,32.0,
+                           78.0,14.0,39.0,53.0,11.0,65.0,20.0,44.0,28.0,70.0f64],
+        "employees"    => [5i64,8,15,10,25,22,6,18,40,9,
+                           19,28,4,21,35,12,24,7,30,16,
+                           38,8,20,26,7,32,11,23,14,34],
+        "satisfaction" => [3.8,4.0,4.3,4.1,4.6,4.4,3.9,4.2,4.8,4.0,
+                           4.3,4.5,3.7,4.3,4.7,4.1,4.4,3.8,4.5,4.2,
+                           4.7,3.9,4.3,4.5,3.8,4.6,4.0,4.4,4.1,4.6f64],
+        "tier"         => ["Small","Small","Medium","Small","Large","Medium",
+                           "Small","Medium","Large","Small","Medium","Large",
+                           "Small","Medium","Large","Medium","Medium","Small",
+                           "Large","Medium","Large","Small","Medium","Large",
+                           "Small","Large","Small","Medium","Medium","Large"]
+    ]
+    .expect("scatter_performance")
+}
+
+pub fn build_project_status() -> DataFrame {
+    df![
+        "project" => ["Auth Rewrite","API v3","Mobile App","Dashboard",
+                       "Search Engine","Payment Gateway","CI/CD Pipeline",
+                       "Data Lake","Notifications","Analytics"],
+        "completion" => [95.0, 78.0, 62.0, 88.0, 45.0, 92.0, 100.0, 55.0, 70.0, 82.0f64]
+    ]
+    .expect("project_status")
+}
+
+pub fn build_cost_breakdown() -> DataFrame {
+    df![
+        "category" => ["Salaries","Cloud Infra","Marketing","Office",
+                        "Software Licenses","Travel","Training","Legal"],
+        "amount" => [850.0, 320.0, 200.0, 150.0, 95.0, 60.0, 45.0, 35.0f64]
+    ]
+    .expect("cost_breakdown")
+}
+
+pub fn build_quarterly_trends() -> DataFrame {
+    df![
+        "quarter"  => ["Q1-23","Q2-23","Q3-23","Q4-23","Q1-24","Q2-24","Q3-24","Q4-24"],
+        "revenue"  => [680.0,750.0,720.0,810.0,890.0,960.0,940.0,1050.0f64],
+        "costs"    => [520.0,560.0,540.0,590.0,630.0,670.0,660.0,710.0f64],
+        "margin"   => [23.5,25.3,25.0,27.2,29.2,30.2,29.8,32.4f64]
+    ]
+    .expect("quarterly_trends")
+}
+
+pub fn build_marketing_channels() -> DataFrame {
+    df![
+        "quarter" => ["Q1","Q1","Q1","Q1","Q2","Q2","Q2","Q2",
+                       "Q3","Q3","Q3","Q3","Q4","Q4","Q4","Q4"],
+        "channel" => ["Social","Email","Search","Direct",
+                       "Social","Email","Search","Direct",
+                       "Social","Email","Search","Direct",
+                       "Social","Email","Search","Direct"],
+        "spend" => [45.0,30.0,65.0,20.0, 55.0,35.0,75.0,22.0,
+                    60.0,38.0,80.0,25.0, 70.0,42.0,90.0,28.0f64]
+    ]
+    .expect("marketing_channels")
+}

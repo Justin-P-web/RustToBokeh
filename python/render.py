@@ -636,9 +636,9 @@ def build_filter_objects(page_filters, source_cache):
             step_ms = filt["step_ms"]
             bf = BooleanFilter(booleans=[True] * n)
             dr_slider = DateRangeSlider(
-                start=min_ms, end=max_ms,
-                value=(min_ms, max_ms),
-                step=step_ms,
+                start=int(min_ms), end=int(max_ms),
+                value=(int(min_ms), int(max_ms)),
+                step=int(step_ms),
                 title=filt["label"],
                 sizing_mode="stretch_width",
             )

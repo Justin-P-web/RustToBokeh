@@ -19,7 +19,7 @@ Python (Bokeh + Jinja2)
 3. **Define pages** with `PageBuilder`, adding chart specs and optional interactive filters.
 4. **Call `Dashboard::render()`** — PyO3 acquires the Python GIL, passes everything to the embedded `render.py`, and writes one HTML file per page.
 
-The Python script and HTML template are embedded into the binary at compile time using `include_str!()`, so the final executable has no runtime file dependencies beyond a Python interpreter and the required Python packages.
+The Python script and HTML template are embedded into the binary at compile time using `include_str!()`, so the final executable has no runtime file dependencies beyond a Python interpreter and the required packages.
 
 ## Quick Start
 
@@ -45,7 +45,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                     .y_label("USD")
                     .build()?
             ).at(0, 0, 2).build())
-            .build(),
+            .build()?,
     );
     dash.render()?;
     Ok(())
@@ -55,97 +55,342 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 ## Prerequisites
 
 - Rust toolchain (1.75+)
-- `curl` or `wget` (for downloading Python)
-- No system Python installation required
+- `curl` or `wget` (for downloading vendored Python)
+- No system Python installation required when using the vendor setup
 
 ## Setup
 
-Run the vendor script once after cloning. It downloads a standalone Python build and installs the required pip packages:
+### Vendored Python (recommended)
+
+Run the setup script once after cloning. It downloads a standalone CPython 3.12 build from [python-build-standalone](https://github.com/indygreg/python-build-standalone), extracts it to `vendor/python/`, installs all required pip packages, and writes `.cargo/config.toml` so that PyO3 links against the vendored interpreter automatically.
 
 ```bash
 bash scripts/setup_vendor.sh
 ```
 
-This creates `vendor/python/` with a portable Python interpreter and writes `.cargo/config.toml` to point PyO3 at it.
+Supported platforms: Linux x86_64/aarch64, macOS x86_64/aarch64, Windows x86_64.
+
+To force a fresh download (e.g. after upgrading Python), delete `vendor/python/` and re-run the script:
+
+```bash
+rm -rf vendor/python
+bash scripts/setup_vendor.sh
+```
 
 ### Alternative: System Python
 
-If you prefer to use your own Python installation:
+If you have a system or virtual-environment Python with the required packages:
 
 ```bash
 pip install -r requirements.txt
 ```
 
+Then set the `PYO3_PYTHON` environment variable to point at that interpreter before building:
+
+```bash
+PYO3_PYTHON=$(which python3) cargo build --release
+```
+
+Or add it permanently to `.cargo/config.toml`:
+
+```toml
+[env]
+PYO3_PYTHON = { value = "/usr/bin/python3" }
+```
+
 ### Offline builds
 
-To make the project buildable on a machine with no internet access, comment out the `vendor/` line in `.gitignore` and commit the `vendor/python/` directory. This adds ~300 MB to the repo but allows cloning and building with zero downloads.
+To make the project buildable with no internet access, comment out the `vendor/` line in `.gitignore` and commit the `vendor/python/` directory. This adds approximately 300 MB to the repository but allows cloning and building with zero downloads.
 
-## Building & Running
+## Building and Running
 
 ```bash
 cargo build --release
 cargo run --bin example-dashboard --release
 ```
 
-On success the dashboard is written to `output/` in the current directory (one HTML file per page). Open any file in a browser to explore the interactive charts with cross-page navigation.
+On success, HTML files are written to the `output/` directory in the current working directory — one file per dashboard page. Open any of them in a browser to explore the interactive charts and navigate between pages.
+
+To run the unit tests (no Python required):
+
+```bash
+cargo test --lib
+```
 
 ## Library Usage
 
-Add `rust-to-bokeh` as a dependency in your `Cargo.toml` and import the prelude:
+Add `rust-to-bokeh` as a dependency in your `Cargo.toml`:
+
+```toml
+[dependencies]
+rust-to-bokeh = { path = "..." }
+polars = { version = "0.53", features = ["lazy"] }
+```
+
+Import the prelude to bring all types into scope:
 
 ```rust
 use rust_to_bokeh::prelude::*;
+use polars::prelude::*;
 ```
 
-The prelude re-exports everything you need: `Dashboard`, all chart config types and their builders, `ChartSpecBuilder`, `PageBuilder`, `FilterSpec`, `FilterConfig`, `ChartError`, and utility functions.
+### Dashboard Builder
+
+`Dashboard` is the top-level builder. Configure it with method chaining before calling `render()`:
+
+```rust
+let mut dash = Dashboard::new()
+    .title("Q4 Financial Report")           // label shown in the nav bar
+    .nav_style(NavStyle::Vertical)          // fixed left sidebar (default: Horizontal)
+    .output_dir("reports/q4");              // output directory (default: "output")
+
+// Register DataFrames — each is serialized to Arrow IPC immediately
+dash.add_df("monthly", &mut monthly_df)?;
+dash.add_df("by_region", &mut region_df)?;
+
+// Add pages in display order
+dash.add_page(overview_page()?);
+dash.add_page(detail_page()?);
+
+// Render all pages to HTML
+dash.render()?;
+```
+
+**Navigation styles:**
+
+| `NavStyle` | Layout |
+|---|---|
+| `Horizontal` (default) | Sticky top bar; categories shown as inline labels before their group of links |
+| `Vertical` | Fixed left sidebar; categories shown as section headings with page links stacked below |
+
+### Grid Layout
+
+Every page has a CSS grid with a configurable number of columns (1–12). Modules (charts, paragraphs, tables) are placed in the grid using `.at(row, col, span)` where `row` and `col` are zero-based and `span` is the number of columns the module occupies.
+
+```
+grid_cols = 3
+
+row 0: [  chart A (span 2)  ] [  chart B (span 1)  ]
+row 1: [          chart C (span 3)                  ]
+```
+
+```rust
+PageBuilder::new("overview", "Overview", "Overview", 3)
+    .chart(chart_a.at(0, 0, 2).build())   // row 0, starts at col 0, spans 2
+    .chart(chart_b.at(0, 2, 1).build())   // row 0, starts at col 2, spans 1
+    .chart(chart_c.at(1, 0, 3).build())   // row 1, spans all 3 columns
+    .build()?
+```
+
+`PageBuilder::build()` validates that no two modules in the same row overlap and that no module overflows the grid boundaries, returning `ChartError::GridValidation` if violated.
+
+### Page Categories and Navigation
+
+Group pages under navigation headings by calling `.category()` on the `PageBuilder`. Pages sharing the same category string are grouped together. Use `"A/B"` syntax for hierarchical categories.
+
+```rust
+PageBuilder::new("revenue", "Revenue Overview", "Revenue", 2)
+    .category("Financial")
+    // ...
+
+PageBuilder::new("expenses", "Expense Analysis", "Expenses", 2)
+    .category("Financial")
+    // ...
+
+PageBuilder::new("timeseries", "Sensor Time Series", "Sensors", 2)
+    .category("Reference/Time Series")
+    // ...
+```
+
+Pages without a category are shown ungrouped at the top of the navigation.
 
 ### Supported Chart Types
 
-| Type | Config | Builder | Description |
-|---|---|---|---|
-| Grouped bar | `GroupedBarConfig` | `GroupedBarConfig::builder()` | Vertical bars grouped by category |
-| Multi-line | `LineConfig` | `LineConfig::builder()` | One or more line series on a shared axis |
-| Horizontal bar | `HBarConfig` | `HBarConfig::builder()` | Horizontal bars for ranked/categorical data |
-| Scatter plot | `ScatterConfig` | `ScatterConfig::builder()` | X-Y scatter with circle markers |
+| Type | Constructor | Key config fields |
+|---|---|---|
+| Grouped bar | `ChartSpecBuilder::bar(title, source_key, config)` | `x`, `group`, `value`, `y_label` |
+| Multi-line | `ChartSpecBuilder::line(title, source_key, config)` | `x`, `y_cols`, `y_label` |
+| Horizontal bar | `ChartSpecBuilder::hbar(title, source_key, config)` | `category`, `value`, `x_label` |
+| Scatter plot | `ChartSpecBuilder::scatter(title, source_key, config)` | `x`, `y`, `x_label`, `y_label` |
+
+Each chart config type has its own fluent builder accessed via `::builder()`:
+
+```rust
+// Grouped bar — one bar group per x value, coloured by the group column
+let bar = ChartSpecBuilder::bar("Monthly Revenue", "monthly",
+    GroupedBarConfig::builder()
+        .x("month")
+        .group("category")
+        .value("amount")
+        .y_label("USD (thousands)")
+        .build()?
+).at(0, 0, 2).build();
+
+// Multi-line — one line per entry in y_cols
+let line = ChartSpecBuilder::line("Trend", "monthly",
+    LineConfig::builder()
+        .x("month")
+        .y_cols(&["revenue", "expenses"])
+        .y_label("USD")
+        .build()?
+).at(1, 0, 2).build();
+
+// Horizontal bar — ranked categories
+let hbar = ChartSpecBuilder::hbar("Top Products", "products",
+    HBarConfig::builder()
+        .category("product")
+        .value("sales")
+        .x_label("Units Sold")
+        .build()?
+).at(0, 0, 1).build();
+
+// Scatter plot
+let scatter = ChartSpecBuilder::scatter("Price vs Volume", "trades",
+    ScatterConfig::builder()
+        .x("price")
+        .y("volume")
+        .x_label("Price")
+        .y_label("Volume")
+        .build()?
+).at(0, 1, 1).build();
+```
+
+**Chart dimensions:** override the default responsive width by calling `.dimensions(width, height)` on `ChartSpecBuilder`:
+
+```rust
+ChartSpecBuilder::scatter("Correlation", "data", cfg)
+    .at(0, 0, 1)
+    .dimensions(500, 400)   // fixed pixel size
+    .build()
+```
+
+**Shared data sources:** multiple charts on the same page that reference the same `source_key` share one Bokeh `ColumnDataSource`, enabling linked hover and selection across all those charts automatically.
 
 ### Interactive Filters
 
-Filters are added per-page and affect charts that share their data source. Charts must opt in by calling `.filtered()` on the `ChartSpecBuilder`.
+Add filters to a page via `.filter()` on `PageBuilder`. Charts opt in by calling `.filtered()` on `ChartSpecBuilder` — only charts that share the filter's `source_key` and are marked as filtered will respond.
 
-| Filter | Factory Method | Widget | Description |
+```rust
+PageBuilder::new("analysis", "Product Analysis", "Products", 2)
+    .chart(
+        ChartSpecBuilder::bar("Sales by Product", "products", bar_cfg)
+            .at(0, 0, 2)
+            .filtered()        // this chart responds to filters on "products"
+            .build()
+    )
+    .filter(FilterSpec::range("products", "sales", "Sales Range", 0.0, 500.0, 10.0))
+    .filter(FilterSpec::select("products", "category", "Category",
+        &["Electronics", "Clothing", "Food"]))
+    .build()?
+```
+
+Multiple filters on the same `source_key` combine automatically via Bokeh's `IntersectionFilter`.
+
+| Filter | Factory method | Widget | Behavior |
 |---|---|---|---|
-| Range | `FilterSpec::range(...)` | `RangeSlider` | Filter rows by numeric range |
-| Select | `FilterSpec::select(...)` | Dropdown (with "All") | Filter by exact value match |
-| Group | `FilterSpec::group(...)` | Dropdown | Bokeh `GroupFilter` (no "All" option) |
-| Threshold | `FilterSpec::threshold(...)` | Toggle switch | Show rows above/below a value |
-| Top N | `FilterSpec::top_n(...)` | Slider | Limit to top/bottom N rows |
+| Range | `FilterSpec::range(src, col, label, min, max, step)` | `RangeSlider` | Keeps rows where `col` is within `[min, max]` |
+| Select | `FilterSpec::select(src, col, label, &[options])` | Dropdown | Exact value match; "All" shows everything |
+| Group | `FilterSpec::group(src, col, label, &[options])` | Dropdown | Bokeh `GroupFilter`; no "All" option |
+| Threshold | `FilterSpec::threshold(src, col, label, value, above)` | Toggle switch | Keeps rows above (or below) `value` |
+| Top N | `FilterSpec::top_n(src, col, label, max_n, descending)` | Slider | Limits to top/bottom N rows sorted by `col` |
+| Date range | `FilterSpec::date_range(src, col, label, min_ms, max_ms, step_ms, scale)` | `DateRangeSlider` | Keeps rows where `col` (epoch-ms) is within the selected window |
 
-Multiple filters on the same data source combine automatically via Bokeh's `IntersectionFilter`.
+**Date range filter note:** the column must contain datetime values stored as milliseconds since the Unix epoch. When building the DataFrame, cast a Polars `Date` column to `Int64` and multiply by 86 400 000, or use a `Datetime(Milliseconds, None)` column directly.
+
+### Content Modules: Paragraphs and Tables
+
+Pages can mix charts with styled text blocks and data tables.
+
+**Paragraph:**
+
+```rust
+PageBuilder::new("about", "About This Report", "About", 2)
+    .paragraph(
+        ParagraphSpec::new(
+            "This report covers Q4 2024 financial performance.\n\n\
+             Data is sourced from the internal finance system."
+        )
+        .title("Report Overview")   // optional heading
+        .at(0, 0, 2)
+        .build()
+    )
+    .chart(/* ... */)
+    .build()?
+```
+
+Separate multiple paragraphs with `"\n\n"` — each becomes its own `<p>` element.
+
+**Table:**
+
+```rust
+PageBuilder::new("data-table", "Data Table", "Table", 2)
+    .table(
+        TableSpec::new("Monthly Summary", "monthly")
+            .column(TableColumn::text("month", "Month"))
+            .column(TableColumn::currency("revenue", "Revenue", "$", 0))
+            .column(TableColumn::number("units", "Units", 0))
+            .column(TableColumn::percent("margin", "Margin", 1))
+            .at(0, 0, 2)
+            .build()
+    )
+    .build()?
+```
+
+**Column formats:**
+
+| Factory method | Example output |
+|---|---|
+| `TableColumn::text(key, label)` | `"Widget A"` |
+| `TableColumn::number(key, label, decimals)` | `"3.14"` |
+| `TableColumn::currency(key, label, symbol, decimals)` | `"$1,234.50"` |
+| `TableColumn::percent(key, label, decimals)` | `"28.5%"` |
 
 ### Error Handling
 
 All fallible operations return `Result<T, ChartError>`. The error type covers:
 
-- **`MissingField`** — a required builder field was not set
-- **`Serialization`** — Polars failed to serialize a DataFrame
-- **`Python`** — Python raised an exception during rendering
-- **`InvalidScript`** — the embedded script is malformed (should not occur in practice)
+| Variant | Cause |
+|---|---|
+| `MissingField` | A required builder field was not set |
+| `GridValidation` | Grid layout rules violated (overlap, out of bounds) |
+| `Serialization` | Polars failed to serialize a DataFrame |
+| `Python` | Python raised an exception during rendering |
+| `InvalidScript` | The embedded script is malformed (should not occur in practice) |
 
-`ChartError` implements `From<PolarsError>` and `From<PyErr>`, so it works with `?` in functions returning `Result<T, ChartError>` or `Result<T, Box<dyn Error>>`.
+`ChartError` implements `From<PolarsError>` and `From<PyErr>`, so it composes naturally with `?` in functions returning `Result<T, ChartError>` or `Result<T, Box<dyn Error>>`.
 
 ## Project Structure
 
 ```
 RustToBokeh/
 ├── src/
-│   ├── lib.rs               # Library root: Dashboard builder, serialize_df()
-│   ├── charts.rs             # Chart configs, builders, ChartSpec, FilterSpec
+│   ├── lib.rs                # Library root: Dashboard, NavStyle, serialize_df()
+│   ├── charts/               # Chart types and visual customisation
+│   │   ├── mod.rs            # Re-exports all chart types
+│   │   ├── charts/           # Per-chart config structs and builders
+│   │   │   ├── mod.rs        # ChartConfig enum, GridCell, ChartSpec
+│   │   │   ├── spec.rs       # ChartSpecBuilder
+│   │   │   ├── grouped_bar.rs
+│   │   │   ├── line.rs
+│   │   │   ├── hbar.rs
+│   │   │   └── scatter.rs
+│   │   └── customization/    # Palette, tooltip, axis, filters
+│   │       ├── mod.rs
+│   │       ├── palette.rs
+│   │       ├── time_scale.rs
+│   │       ├── tooltip.rs
+│   │       ├── axis.rs
+│   │       └── filters.rs
 │   ├── pages.rs              # Page and PageBuilder
+│   ├── modules.rs            # ParagraphSpec, TableSpec, TableColumn
 │   ├── error.rs              # ChartError enum
 │   ├── render.rs             # PyO3 bridge to Python
 │   ├── prelude.rs            # Convenience re-exports
 │   └── bin/
-│       └── example_dashboard.rs  # 20-page demo dashboard
+│       └── example_dashboard/
+│           ├── main.rs       # Dashboard setup (register data, add pages, render)
+│           ├── data.rs       # DataFrame builders for demo data
+│           └── pages/        # 23-page demo, one file per category
 ├── python/
 │   └── render.py             # Python renderer (embedded at compile time)
 ├── templates/
@@ -167,6 +412,19 @@ RustToBokeh/
 | Python | [bokeh](https://pypi.org/project/bokeh/) | 3.6.3 | Interactive chart rendering |
 | Python | [polars](https://pypi.org/project/polars/) | 1.24.0 | Arrow IPC deserialization |
 | Python | [jinja2](https://pypi.org/project/Jinja2/) | 3.1.6 | HTML template rendering |
+
+## Troubleshooting
+
+| Problem | Likely cause | Fix |
+|---|---|---|
+| `could not find python` at build time | PyO3 cannot locate the interpreter | Run `bash scripts/setup_vendor.sh`; or set `PYO3_PYTHON` explicitly |
+| `ModuleNotFoundError: bokeh` at runtime | Python packages not installed | Re-run `bash scripts/setup_vendor.sh` or `pip install -r requirements.txt` |
+| `IpcWriter` compile error | `ipc` feature not enabled | Ensure `features = ["ipc"]` in the `polars` dependency in `Cargo.toml` |
+| Blank or empty chart | `source_key` mismatch | Match the `source_key` in `ChartSpec` with the key passed to `add_df()` |
+| Template changes not reflected | `include_str!()` embeds at compile time | Recompile after editing `templates/chart.html` or `python/render.py` |
+| Python DLLs not found on Windows | `build.rs` copy step failed | Run `bash scripts/setup_vendor.sh`, then do a clean rebuild |
+| `GridValidation` error | Module overflows grid or modules overlap | Check `.at(row, col, span)` — `col + span` must not exceed `grid_cols`, and no two modules in the same row may overlap |
+| Charts not responding to filters | Chart not marked `.filtered()` | Call `.filtered()` on `ChartSpecBuilder` for every chart that should respond |
 
 ## License
 

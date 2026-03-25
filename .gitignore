@@ -31,6 +31,9 @@ __pycache__/
 *.pyc
 *.pyo
 
+# Claude Code internal directory
+.claude/
+
 # Generated HTML output
 output/
 output.html

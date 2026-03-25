@@ -14,11 +14,40 @@ RustToBokeh is a demonstration of seamless Rust ↔ Python interoperability for 
 RustToBokeh/
 ├── src/
 │   ├── lib.rs               # Library root: re-exports, Dashboard builder, serialize_df()
-│   ├── charts.rs            # ChartType, ChartSpec, ChartSpecBuilder, FilterConfig, FilterSpec
+│   ├── charts/              # Chart configuration types, layout primitives, filter definitions
+│   │   ├── mod.rs           # Re-exports everything from sub-modules
+│   │   ├── charts/          # Chart types and their builders
+│   │   │   ├── mod.rs       # ChartConfig enum, GridCell, ChartSpec + re-exports
+│   │   │   ├── spec.rs      # ChartSpecBuilder
+│   │   │   ├── grouped_bar.rs  # GroupedBarConfig + builder
+│   │   │   ├── line.rs      # LineConfig + builder
+│   │   │   ├── hbar.rs      # HBarConfig + builder
+│   │   │   └── scatter.rs   # ScatterConfig + builder
+│   │   └── customization/   # Visual styling and interactive filter definitions
+│   │       ├── mod.rs       # Re-exports all customization types
+│   │       ├── palette.rs   # PaletteSpec enum
+│   │       ├── time_scale.rs  # TimeScale enum
+│   │       ├── tooltip.rs   # TooltipFormat, TooltipField, TooltipSpec + builder
+│   │       ├── axis.rs      # AxisConfig + builder
+│   │       └── filters.rs   # FilterConfig enum (6 variants), FilterSpec + factory methods
 │   ├── pages.rs             # Page, PageBuilder
+│   ├── modules.rs           # PageModule, ParagraphSpec, TableSpec, TableColumn
 │   ├── render.rs            # PyO3 bridge: render_dashboard() function
+│   ├── error.rs             # ChartError enum
+│   ├── prelude.rs           # Convenience re-exports (use rust_to_bokeh::prelude::*)
 │   └── bin/
-│       └── example_dashboard.rs  # Example binary with 20-page demo dashboard
+│       └── example_dashboard/
+│           ├── main.rs      # Dashboard setup: register DataFrames, add pages, render
+│           ├── data.rs      # 15 DataFrame builders for demo data
+│           └── pages/       # 23-page demo dashboard, organized by category
+│               ├── mod.rs       # Re-exports all page functions
+│               ├── executive.rs # Executive summary page (no category)
+│               ├── financial.rs # 6 Financial pages
+│               ├── commercial.rs  # 3 Commercial pages
+│               ├── digital.rs   # 3 Digital pages
+│               ├── people.rs    # 3 People pages
+│               ├── operations.rs  # 4 Operations pages
+│               └── reference.rs # Reference pages incl. time-series DateRange demo
 ├── python/
 │   └── render.py            # Python script; deserializes data, renders multi-page Bokeh dashboards
 ├── templates/
@@ -46,7 +75,7 @@ RustToBokeh/
   │  Provides Dashboard builder, serialize_df(), render_dashboard()
   │  Embeds python/render.py and templates/chart.html at compile time via include_str!()
   │
-[User Binary - e.g. src/bin/example_dashboard.rs]
+[User Binary - e.g. src/bin/example_dashboard/main.rs]
   │  Build Polars DataFrames (wide format: one row per category, one column per series)
   │  Define Pages and ChartSpecs using builder API
   │  Call Dashboard::render() or render_dashboard()
@@ -63,7 +92,7 @@ RustToBokeh/
   │  Line/scatter charts sharing the same source_key share one ColumnDataSource (linked selection)
   │  Build Bokeh filter objects (BooleanFilter, GroupFilter, IndexFilter) from FilterSpecs
   │  Combine filters via IntersectionFilter → CDSView on filtered chart renderers
-  │  Create widgets (RangeSlider, Select, Switch, Slider) with CustomJS callbacks
+  │  Create widgets (RangeSlider, Select, Switch, Slider, DateRangeSlider) with CustomJS callbacks
   │  Render each Page to its own HTML file via Jinja2
   │  Write output/<slug>.html files with inter-page navigation
 ```
@@ -72,7 +101,7 @@ Key architectural concepts:
 - `include_str!()` embeds `render.py` and `chart.html` as string literals at **compile time** — no file I/O needed at runtime for these resources.
 - **ChartSpec**: declarative chart definition (type, data source key, columns, dimensions, `filtered` flag). Defined in Rust, consumed by Python.
 - **FilterSpec**: declarative filter definition (source_key, column, label, `FilterConfig` variant). Defined in Rust per-page, consumed by Python to build Bokeh filter objects and widgets.
-- **FilterConfig** enum: `Range` (RangeSlider → BooleanFilter), `Select` (dropdown with "All" → BooleanFilter), `Group` (dropdown → GroupFilter), `Threshold` (Switch toggle → BooleanFilter), `TopN` (Slider → IndexFilter).
+- **FilterConfig** enum: `Range` (RangeSlider → BooleanFilter), `Select` (dropdown with "All" → BooleanFilter), `Group` (dropdown → GroupFilter), `Threshold` (Switch toggle → BooleanFilter), `TopN` (Slider → IndexFilter), `DateRange` (DateRangeSlider → BooleanFilter on epoch-ms column).
 - **Page**: groups ChartSpecs + FilterSpecs into a single HTML file. Each page embeds only the data it needs.
 - **Shared ColumnDataSource**: all charts on the same page that reference the same `source_key` share one flat CDS, enabling linked hover/selection across all chart types.
 - **CDSView filtering**: filtered charts receive a `CDSView` with combined Bokeh filter objects (via `IntersectionFilter` when multiple filters target the same source). Widgets update filter properties via `CustomJS` callbacks.
@@ -112,7 +141,7 @@ cargo run --bin example-dashboard --release
 
 This produces HTML files in the `output/` directory (one per page).
 
-To use as a library in your own binary, add `rust-to-bokeh` as a dependency and use the `Dashboard` builder API (see `src/bin/example_dashboard.rs` for a full example).
+To use as a library in your own binary, add `rust-to-bokeh` as a dependency and use the `Dashboard` builder API (see `src/bin/example_dashboard/main.rs` for a full example).
 
 ---
 
@@ -134,17 +163,21 @@ Python versions are pinned in `requirements.txt`.
 
 ## Code Conventions
 
-### Rust Library (`src/lib.rs`, `src/charts.rs`, `src/pages.rs`, `src/render.rs`)
+### Rust Library (`src/lib.rs`, `src/charts/`, `src/pages.rs`, `src/render.rs`)
 
 - **`Dashboard`** builder: high-level API that collects DataFrames via `add_df()` and pages via `add_page()`, then calls `render()`.
 - **`serialize_df()`**: standalone function to serialize a Polars DataFrame to Arrow IPC bytes.
 - **`render_dashboard()`**: lower-level function taking pre-serialized frame data and page definitions.
-- **`ChartSpecBuilder`**: fluent builder with `bar()`, `line()`, `hbar()`, `scatter()` constructors, chained with `.at(row, col, span)` and `.filtered()`.
-- **`PageBuilder`**: fluent builder with `.chart()` and `.filter()` methods.
-- **`FilterSpec`** factory methods: `range()`, `select()`, `group()`, `threshold()`, `top_n()`.
+- **`ChartSpecBuilder`**: fluent builder with `bar()`, `line()`, `hbar()`, `scatter()` constructors, chained with `.at(row, col, span)`, `.filtered()`, and `.dimensions(width, height)`.
+- **`PageBuilder`**: fluent builder with `.chart()`, `.paragraph()`, `.table()`, and `.filter()` methods.
+- **`FilterSpec`** factory methods: `range()`, `select()`, `group()`, `threshold()`, `top_n()`, `date_range()`.
 - Use `.expect()` for error handling (acceptable for this demo; update to `?` propagation if error handling is needed in production extensions).
 
-**Supported chart types** (`ChartType` enum): `GroupedBar`, `LineMulti`, `HBar`, `ScatterPlot`.
+**Supported chart types** (`ChartConfig` enum in `src/charts/charts/mod.rs`): `GroupedBar`, `Line`, `HBar`, `Scatter`.
+
+**Chart module layout** (`src/charts/`):
+- `charts/` — chart type definitions and config builders (one file per chart type)
+- `customization/` — palette, time scale, tooltip, axis config, and filter definitions
 
 **Pattern for adding a new chart to an existing page:**
 1. If needed, build a DataFrame and register it with `dash.add_df("key", &mut df)`.
@@ -152,9 +185,10 @@ Python versions are pinned in `requirements.txt`.
 3. Python's `render.py` handles the rest generically — no Python changes needed unless adding a new chart type.
 
 **Pattern for adding a new page:**
-1. Use `PageBuilder::new(...)` with desired `ChartSpec`s and call `dash.add_page(...)`.
-2. Ensure referenced `source_key`s have been registered with `add_df()`.
-3. Navigation is generated automatically by the template.
+1. Add a new function to the appropriate file under `src/bin/example_dashboard/pages/`.
+2. Re-export it in `pages/mod.rs` and call it in `main.rs`.
+3. Ensure referenced `source_key`s have been registered with `add_df()`.
+4. Navigation is generated automatically by the template.
 
 ### Python (`python/render.py`)
 
@@ -175,31 +209,61 @@ Python versions are pinned in `requirements.txt`.
 
 ---
 
+## Example Dashboard Feature Coverage
+
+The 23-page example dashboard in `src/bin/example_dashboard/` demonstrates every available feature:
+
+| Feature | Where demonstrated |
+|---------|-------------------|
+| All 4 chart types (bar, line, hbar, scatter) | Multiple pages |
+| `FilterConfig::Range` — RangeSlider | Executive Summary, Product Analysis |
+| `FilterConfig::Select` — dropdown with "All" | Product Analysis, Financial Health, Time Series |
+| `FilterConfig::Group` — Bokeh GroupFilter | Customer Insights |
+| `FilterConfig::Threshold` — toggle switch | Team Metrics, Cost Optimization, Workforce Planning |
+| `FilterConfig::TopN` — slider for top-N rows | Project Portfolio, Workforce Planning |
+| `FilterConfig::DateRange` — DateRangeSlider | Sensor Time Series (Reference) |
+| Multiple filters on one source (IntersectionFilter) | Product Analysis, Workforce Planning, Time Series |
+| `ParagraphSpec` — text content module | Module Showcase, Time Series |
+| `TableSpec` — data table with column formats | Module Showcase |
+| `NavStyle::Vertical` — fixed left sidebar | Whole example dashboard |
+| `NavStyle::Horizontal` — sticky top bar | Default; tested in `tests/dashboard_output.rs` |
+| Page categories (grouped nav) | Financial, Commercial, Digital, People, Operations |
+| Hierarchical nav categories (`"A/B"` syntax) | Reference/Time Series |
+| `ChartSpec::dimensions(w, h)` — fixed-size chart | Chart Customisation (scatter) |
+| Custom colors, markers, palettes, line widths | Chart Customisation |
+| `TooltipSpec` — multi-field custom tooltips | Chart Customisation, Time Series |
+| `AxisConfig` — ranges, bounds, tick format, grid | Chart Customisation |
+| `TimeScale` — datetime axis formatting | Time Series (line chart) |
+| `TooltipFormat::DateTime` — datetime tooltips | Time Series |
+
+---
+
 ## How to Extend the Project
 
 ### Add a New Chart Type
 
-1. **In `src/charts.rs`**: Add a variant to the `ChartType` enum and its `as_str()` mapping. Add a builder method to `ChartSpecBuilder`.
+1. **In `src/charts/charts/`**: Create a new config file (e.g., `pie.rs`) with the config struct and builder. Add the variant to `ChartConfig` in `mod.rs` and re-export from `mod.rs`. Add a builder method to `ChartSpecBuilder` in `spec.rs`.
 2. **In `python/render.py`**: Add a rendering branch for the new chart type string in the chart-building loop.
 3. Use the new type in a `ChartSpec` via the builder.
 
 ### Add a New Page
 
-1. Use `PageBuilder::new(...)` with desired `ChartSpec`s and call `dash.add_page(...)`.
-2. Ensure referenced `source_key`s have been registered with `dash.add_df()`.
-3. Navigation updates automatically — no template changes needed.
+1. Add a new function to the appropriate file under `src/bin/example_dashboard/pages/` (or create a new file).
+2. Re-export it in `pages/mod.rs` and call it in `main.rs`.
+3. Ensure referenced `source_key`s have been registered with `dash.add_df()`.
+4. Navigation updates automatically — no template changes needed.
 
 ### Add a Filter to a Page
 
 1. Add a `FilterSpec` via its factory method (e.g. `FilterSpec::range(...)`) to the `PageBuilder` chain.
 2. Mark charts with `.filtered()` to opt them into CDSView-based filtering (must share the same `source_key`).
-3. Available filter types: `Range` (RangeSlider), `Select` (dropdown with "All"), `Group` (dropdown, single group — uses `GroupFilter`), `Threshold` (toggle switch), `TopN` (slider for top N rows — uses `IndexFilter`).
+3. Available filter types: `Range` (RangeSlider), `Select` (dropdown with "All"), `Group` (dropdown, single group — uses `GroupFilter`), `Threshold` (toggle switch), `TopN` (slider for top N rows — uses `IndexFilter`), `DateRange` (DateRangeSlider for epoch-ms columns).
 4. Multiple filters on the same `source_key` combine via `IntersectionFilter` automatically.
 5. Python handles widget creation and `CustomJS` callbacks generically — no Python changes needed for existing filter types.
 
 ### Add a New Filter Type
 
-1. **In `src/charts.rs`**: Add a variant to `FilterConfig` with its parameters. Add a factory method to `FilterSpec`.
+1. **In `src/charts/customization/filters.rs`**: Add a variant to `FilterConfig` with its parameters. Add a factory method to `FilterSpec`.
 2. **In `src/render.rs`**: Add serialization for the new variant in the PyO3 bridge `match` block.
 3. **In `python/render.py`**: Add a handler in `build_filter_objects()` that creates the Bokeh filter model, widget, and `CustomJS` callback.
 
@@ -218,11 +282,16 @@ Python versions are pinned in `requirements.txt`.
 
 ## Testing
 
-There are currently no automated tests. When adding tests:
+The library has 123 unit tests across the `src/charts/` sub-modules, `src/pages.rs`, `src/modules.rs`, and `src/lib.rs`. Run them with:
 
-- **Rust unit tests**: Use `#[cfg(test)]` modules in `src/main.rs`. Test `build_*_dataframe()` and `serialize_df()` independently of Python.
-- **Python tests**: Use `pytest` for `render.py` logic if refactored into functions.
-- **Integration tests**: Run `cargo run --release` and validate that `output/*.html` files are produced and contain expected content.
+```bash
+cargo test --lib
+```
+
+Integration tests are in `tests/dashboard_output.rs`. They require a Python interpreter with the required packages installed.
+
+- **Rust unit tests**: `#[cfg(test)]` modules in each source file test the builders and validators independently of Python.
+- **Integration tests**: Run `cargo run --bin example-dashboard --release` and validate that `output/*.html` files are produced and contain expected content.
 
 ---
 

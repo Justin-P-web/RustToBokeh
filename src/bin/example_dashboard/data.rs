@@ -184,3 +184,49 @@ pub fn build_marketing_channels() -> DataFrame {
     ]
     .expect("marketing_channels")
 }
+
+/// 30 days of sensor readings (Jan 1–30 2024), cycling through three sensors.
+///
+/// The `timestamp_ms` column holds milliseconds since the Unix epoch so that
+/// `FilterConfig::DateRange` and datetime axes work correctly.
+pub fn build_sensor_events() -> DataFrame {
+    // Jan 1 2024 00:00:00 UTC
+    const EPOCH_START: i64 = 1_704_067_200_000;
+    const ONE_DAY_MS: i64 = 86_400_000;
+    const SENSORS: [&str; 3] = ["Alpha", "Beta", "Gamma"];
+
+    let n = 30usize;
+    let mut timestamps: Vec<i64> = Vec::with_capacity(n);
+    let mut sensors: Vec<&str> = Vec::with_capacity(n);
+    let mut temperatures: Vec<f64> = Vec::with_capacity(n);
+    let mut humidities: Vec<f64> = Vec::with_capacity(n);
+    let mut pressures: Vec<f64> = Vec::with_capacity(n);
+
+    // Synthetic but realistic-looking readings
+    let temp_base = [22.1, 21.5, 23.0, 20.8, 24.2, 22.7, 21.9, 23.5, 25.1, 22.3,
+                     20.5, 23.8, 24.6, 21.2, 22.9, 23.1, 20.9, 25.3, 22.6, 21.7,
+                     24.0, 23.3, 21.0, 22.4, 25.5, 20.6, 23.7, 22.0, 24.8, 21.4f64];
+    let hum_base =  [55.0, 58.2, 52.4, 61.0, 48.5, 57.3, 63.1, 50.8, 45.2, 59.7,
+                     64.0, 51.5, 47.8, 60.3, 54.9, 56.1, 62.4, 44.7, 58.8, 61.5,
+                     49.3, 53.6, 65.0, 57.9, 43.2, 63.8, 52.1, 59.4, 46.5, 60.7f64];
+    let pres_base = [1013.0,1015.2,1012.5,1016.8,1011.0,1014.3,1017.5,1010.8,1013.9,1015.6,
+                     1012.1,1016.2,1011.7,1014.8,1013.4,1015.0,1012.8,1017.1,1013.6,1014.5,
+                     1011.3,1016.5,1012.2,1015.8,1010.5,1017.9,1013.1,1014.2,1012.6,1015.4f64];
+
+    for i in 0..n {
+        timestamps.push(EPOCH_START + i as i64 * ONE_DAY_MS);
+        sensors.push(SENSORS[i % 3]);
+        temperatures.push(temp_base[i]);
+        humidities.push(hum_base[i]);
+        pressures.push(pres_base[i]);
+    }
+
+    df![
+        "timestamp_ms" => timestamps,
+        "sensor"       => sensors,
+        "temperature"  => temperatures,
+        "humidity"     => humidities,
+        "pressure"     => pressures
+    ]
+    .expect("sensor_events")
+}

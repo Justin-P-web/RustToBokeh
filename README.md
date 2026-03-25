@@ -119,6 +119,7 @@ Filters are added per-page and affect charts that share their data source. Chart
 | Group | `FilterSpec::group(...)` | Dropdown | Bokeh `GroupFilter` (no "All" option) |
 | Threshold | `FilterSpec::threshold(...)` | Toggle switch | Show rows above/below a value |
 | Top N | `FilterSpec::top_n(...)` | Slider | Limit to top/bottom N rows |
+| Date Range | `FilterSpec::date_range(...)` | `DateRangeSlider` | Filter rows by datetime window (epoch-ms column) |
 
 Multiple filters on the same data source combine automatically via Bokeh's `IntersectionFilter`.
 
@@ -138,14 +139,33 @@ All fallible operations return `Result<T, ChartError>`. The error type covers:
 ```
 RustToBokeh/
 ├── src/
-│   ├── lib.rs               # Library root: Dashboard builder, serialize_df()
-│   ├── charts.rs             # Chart configs, builders, ChartSpec, FilterSpec
+│   ├── lib.rs                # Library root: Dashboard builder, serialize_df()
+│   ├── charts/               # Chart types and visual customisation
+│   │   ├── mod.rs            # Re-exports all chart types
+│   │   ├── charts/           # Per-chart config structs and builders
+│   │   │   ├── mod.rs        # ChartConfig enum, GridCell, ChartSpec
+│   │   │   ├── spec.rs       # ChartSpecBuilder
+│   │   │   ├── grouped_bar.rs
+│   │   │   ├── line.rs
+│   │   │   ├── hbar.rs
+│   │   │   └── scatter.rs
+│   │   └── customization/    # Palette, tooltip, axis, filters
+│   │       ├── mod.rs
+│   │       ├── palette.rs
+│   │       ├── time_scale.rs
+│   │       ├── tooltip.rs
+│   │       ├── axis.rs
+│   │       └── filters.rs
 │   ├── pages.rs              # Page and PageBuilder
+│   ├── modules.rs            # ParagraphSpec, TableSpec, TableColumn
 │   ├── error.rs              # ChartError enum
 │   ├── render.rs             # PyO3 bridge to Python
 │   ├── prelude.rs            # Convenience re-exports
 │   └── bin/
-│       └── example_dashboard.rs  # 20-page demo dashboard
+│       └── example_dashboard/
+│           ├── main.rs       # Dashboard setup (register data, add pages, render)
+│           ├── data.rs       # 15 DataFrame builders
+│           └── pages/        # 23-page demo, one file per category
 ├── python/
 │   └── render.py             # Python renderer (embedded at compile time)
 ├── templates/

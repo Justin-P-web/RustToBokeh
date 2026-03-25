@@ -19,6 +19,8 @@ from bokeh.models import (
     CDSView,
     ColumnDataSource,
     CustomJS,
+    DateRangeSlider,
+    DatetimeTickFormatter,
     FactorRange,
     GroupFilter,
     HoverTool,
@@ -41,6 +43,34 @@ _PALETTE = [
     "#8172B3", "#937860", "#DA8BC3", "#8C8C8C",
     "#CCB974", "#64B5CD",
 ]
+
+# ── Time scale helpers ───────────────────────────────────────────────────────
+
+_TIME_SCALE_FMT = {
+    "milliseconds": "%H:%M:%S.%3N",
+    "seconds":      "%H:%M:%S",
+    "minutes":      "%H:%M",
+    "hours":        "%m/%d %H:%M",
+    "days":         "%Y-%m-%d",
+    "months":       "%b %Y",
+    "years":        "%Y",
+}
+
+
+def _datetime_formatter(time_scale):
+    """Return a DatetimeTickFormatter appropriate for the given time_scale string."""
+    fmt = _TIME_SCALE_FMT.get(time_scale, "%Y-%m-%d")
+    return DatetimeTickFormatter(
+        milliseconds=fmt,
+        seconds=fmt,
+        minsec=fmt,
+        minutes=fmt,
+        hourmin=fmt,
+        hours=fmt,
+        days=fmt,
+        months=fmt,
+        years=fmt,
+    )
 
 # ── Deserialize all frames once ─────────────────────────────────────────────
 
@@ -96,6 +126,7 @@ def _build_hover_tool(spec):
     if not tt_spec:
         return None
     tooltips = []
+    formatters = {}
     for field in tt_spec:
         col = field["column"]
         label = field["label"]
@@ -111,18 +142,28 @@ def _build_hover_tool(spec):
             fmt_str = f"@{{{col}}}{{0.{'0' * d}%}}"
         elif fmt == "currency":
             fmt_str = f"@{{{col}}}{{$0,0}}"
+        elif fmt == "datetime":
+            ts = field.get("time_scale", "days")
+            strftime_fmt = _TIME_SCALE_FMT.get(ts, "%Y-%m-%d")
+            fmt_str = f"@{{{col}}}{{custom}}"
+            formatters[f"@{{{col}}}"] = "datetime"
+            # Override with the specific strftime format inside the tooltip string
+            fmt_str = f"@{{{col}}}{{{strftime_fmt}}}"
+            formatters[f"@{{{col}}}"] = "datetime"
         else:
             fmt_str = f"@{{{col}}}"
         tooltips.append((label, fmt_str))
-    return HoverTool(tooltips=tooltips)
+    return HoverTool(tooltips=tooltips, formatters=formatters)
 
 
 def _apply_axis_config(axis_dict, bokeh_axis, range_obj, grid_obj):
     """Apply an axis config dict to a Bokeh axis, range, and grid object."""
     if axis_dict is None:
         return
-    # Tick format
-    if axis_dict.get("tick_format") is not None:
+    # Datetime tick formatter takes priority over numeral tick format
+    if axis_dict.get("time_scale") is not None:
+        bokeh_axis.formatter = _datetime_formatter(axis_dict["time_scale"])
+    elif axis_dict.get("tick_format") is not None:
         bokeh_axis.formatter = NumeralTickFormatter(format=axis_dict["tick_format"])
     # Label rotation (degrees → radians)
     if axis_dict.get("label_rotation") is not None:
@@ -142,7 +183,7 @@ def _apply_axis_config(axis_dict, bokeh_axis, range_obj, grid_obj):
             range_obj.bounds = (bmin, bmax)
 
 
-def _figure_kw(spec, default_height=400):
+def _figure_kw(spec, default_height=400, x_axis_type=None):
     """Return keyword arguments for figure() derived from a chart spec."""
     kw = {
         "title": spec["title"],
@@ -154,7 +195,17 @@ def _figure_kw(spec, default_height=400):
         kw["sizing_mode"] = "fixed"
     else:
         kw["sizing_mode"] = "stretch_width"
+    if x_axis_type is not None:
+        kw["x_axis_type"] = x_axis_type
     return kw
+
+
+def _x_axis_time_scale(spec):
+    """Return the time_scale string from the x_axis config, or None."""
+    x_axis = spec.get("x_axis")
+    if x_axis and x_axis.get("time_scale"):
+        return x_axis["time_scale"]
+    return None
 
 
 # ── Chart builders ──────────────────────────────────────────────────────────
@@ -231,8 +282,15 @@ def build_line_multi(spec, source_cache, view=None):
     if hover is None:
         tools = "pan,wheel_zoom,box_zoom,reset,save,hover,box_select,tap"
 
-    kw = _figure_kw(spec)
-    kw["x_range"] = df[x_col].to_list()
+    ts = _x_axis_time_scale(spec)
+    if ts:
+        # Datetime x axis: use Range1d so Bokeh renders datetime ticks correctly
+        vals = df[x_col].to_list()
+        kw = _figure_kw(spec, x_axis_type="datetime")
+        kw["x_range"] = Range1d(start=min(vals), end=max(vals))
+    else:
+        kw = _figure_kw(spec)
+        kw["x_range"] = df[x_col].to_list()
     kw["tools"] = tools
     fig = figure(**kw)
     if hover:
@@ -310,7 +368,8 @@ def build_scatter(spec, source_cache, view=None):
     if hover is None:
         tools = "pan,wheel_zoom,box_zoom,reset,save,hover,box_select,tap"
 
-    kw = _figure_kw(spec)
+    ts = _x_axis_time_scale(spec)
+    kw = _figure_kw(spec, x_axis_type="datetime" if ts else None)
     kw["tools"] = tools
     fig = figure(**kw)
     if hover:
@@ -568,6 +627,33 @@ def build_filter_objects(page_filters, source_cache):
             slider.js_on_change("value", callback)
             filters_by_source[source_key].append(idx_filter)
             widgets.append(slider)
+
+        elif kind == "date_range":
+            # BooleanFilter driven by a DateRangeSlider.
+            # Column values must be milliseconds since the Unix epoch.
+            min_ms = filt["min_ms"]
+            max_ms = filt["max_ms"]
+            step_ms = filt["step_ms"]
+            bf = BooleanFilter(booleans=[True] * n)
+            dr_slider = DateRangeSlider(
+                start=min_ms, end=max_ms,
+                value=(min_ms, max_ms),
+                step=step_ms,
+                title=filt["label"],
+                sizing_mode="stretch_width",
+            )
+            callback = CustomJS(
+                args=dict(bf=bf, source=source, col=col_name),
+                code="""
+                    const [lo, hi] = cb_obj.value;
+                    const data = source.data[col];
+                    bf.booleans = data.map(v => v >= lo && v <= hi);
+                    source.change.emit();
+                """,
+            )
+            dr_slider.js_on_change("value", callback)
+            filters_by_source[source_key].append(bf)
+            widgets.append(dr_slider)
 
     # Build CDSView per source_key
     views = {}

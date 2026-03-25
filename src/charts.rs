@@ -69,6 +69,80 @@ pub enum PaletteSpec {
     Custom(Vec<String>),
 }
 
+/// Time unit scale used for formatting datetime values on axes and tooltips.
+///
+/// Each variant maps to a [`DatetimeTickFormatter`](https://docs.bokeh.org/en/latest/docs/reference/models/formatters.html#bokeh.models.formatters.DatetimeTickFormatter)
+/// format string and a corresponding tooltip strftime pattern.
+///
+/// # Format strings produced
+///
+/// | Variant | Axis tick format | Tooltip format |
+/// |---|---|---|
+/// | `Milliseconds` | `%H:%M:%S.%3N` | `%H:%M:%S.%3N` |
+/// | `Seconds` | `%H:%M:%S` | `%H:%M:%S` |
+/// | `Minutes` | `%H:%M` | `%H:%M` |
+/// | `Hours` | `%m/%d %H:%M` | `%m/%d %H:%M` |
+/// | `Days` | `%Y-%m-%d` | `%Y-%m-%d` |
+/// | `Months` | `%b %Y` | `%b %Y` |
+/// | `Years` | `%Y` | `%Y` |
+///
+/// # Example
+///
+/// ```ignore
+/// use rust_to_bokeh::prelude::*;
+///
+/// let x = AxisConfig::builder()
+///     .time_scale(TimeScale::Days)
+///     .build();
+/// ```
+#[derive(Clone)]
+pub enum TimeScale {
+    /// Sub-second resolution: `%H:%M:%S.%3N`
+    Milliseconds,
+    /// Second resolution: `%H:%M:%S`
+    Seconds,
+    /// Minute resolution: `%H:%M`
+    Minutes,
+    /// Hour resolution: `%m/%d %H:%M`
+    Hours,
+    /// Day resolution: `%Y-%m-%d`
+    Days,
+    /// Month resolution: `%b %Y`
+    Months,
+    /// Year resolution: `%Y`
+    Years,
+}
+
+impl TimeScale {
+    /// Return the strftime format string used for this scale.
+    #[must_use]
+    pub fn format_str(&self) -> &'static str {
+        match self {
+            TimeScale::Milliseconds => "%H:%M:%S.%3N",
+            TimeScale::Seconds => "%H:%M:%S",
+            TimeScale::Minutes => "%H:%M",
+            TimeScale::Hours => "%m/%d %H:%M",
+            TimeScale::Days => "%Y-%m-%d",
+            TimeScale::Months => "%b %Y",
+            TimeScale::Years => "%Y",
+        }
+    }
+
+    /// Return the string identifier passed to Python.
+    #[must_use]
+    pub fn as_str(&self) -> &'static str {
+        match self {
+            TimeScale::Milliseconds => "milliseconds",
+            TimeScale::Seconds => "seconds",
+            TimeScale::Minutes => "minutes",
+            TimeScale::Hours => "hours",
+            TimeScale::Days => "days",
+            TimeScale::Months => "months",
+            TimeScale::Years => "years",
+        }
+    }
+}
+
 /// Format applied to a single tooltip field.
 ///
 /// Used inside [`TooltipSpec`] to control how each hover value is displayed.
@@ -82,6 +156,9 @@ pub enum TooltipFormat {
     Percent(Option<u8>),
     /// Currency — prefixed with `$` and formatted with thousand separators.
     Currency,
+    /// Datetime value stored as milliseconds since the Unix epoch.
+    /// The [`TimeScale`] controls the strftime display format.
+    DateTime(TimeScale),
 }
 
 /// A single row in a chart tooltip.
@@ -196,9 +273,15 @@ pub struct AxisConfig {
     pub label_rotation: Option<f64>,
     /// [Numeral.js](http://numeraljs.com/) format string for tick labels
     /// (e.g. `"$0,0"`, `"0.0%"`, `"0.00"`).
+    /// Ignored when [`time_scale`](AxisConfig::time_scale) is set.
     pub tick_format: Option<String>,
     /// Whether to draw grid lines for this axis.  Defaults to `true`.
     pub show_grid: bool,
+    /// When set, configures the axis as a datetime axis using
+    /// Bokeh's `DatetimeTickFormatter` at the specified resolution.
+    /// The chart's x-range is automatically switched to `Range1d` for
+    /// line and scatter charts.
+    pub time_scale: Option<TimeScale>,
 }
 
 /// Builder for [`AxisConfig`].
@@ -210,6 +293,7 @@ pub struct AxisConfigBuilder {
     label_rotation: Option<f64>,
     tick_format: Option<String>,
     show_grid: bool,
+    time_scale: Option<TimeScale>,
 }
 
 impl AxisConfig {
@@ -224,6 +308,7 @@ impl AxisConfig {
             label_rotation: None,
             tick_format: None,
             show_grid: true,
+            time_scale: None,
         }
     }
 }
@@ -277,6 +362,21 @@ impl AxisConfigBuilder {
         self
     }
 
+    /// Mark this axis as a datetime axis at the given time resolution.
+    ///
+    /// When set, Bokeh's `DatetimeTickFormatter` is applied using the format
+    /// string from [`TimeScale::format_str`]. For line and scatter charts the
+    /// x-range is automatically switched to `Range1d` (numeric/datetime) so
+    /// Bokeh renders correct datetime tick labels.
+    ///
+    /// Data values must be stored as milliseconds since the Unix epoch
+    /// (integers or floats).
+    #[must_use]
+    pub fn time_scale(mut self, scale: TimeScale) -> Self {
+        self.time_scale = Some(scale);
+        self
+    }
+
     /// Consume the builder and produce an [`AxisConfig`].
     #[must_use]
     pub fn build(self) -> AxisConfig {
@@ -288,6 +388,7 @@ impl AxisConfigBuilder {
             label_rotation: self.label_rotation,
             tick_format: self.tick_format,
             show_grid: self.show_grid,
+            time_scale: self.time_scale,
         }
     }
 }
@@ -1025,6 +1126,22 @@ pub enum FilterConfig {
     /// by the filter's column. Uses Bokeh's `IndexFilter` to select row
     /// indices after sorting.
     TopN { max_n: usize, descending: bool },
+    /// A date-range slider that filters rows where a datetime column (stored
+    /// as milliseconds since the Unix epoch) falls within the selected
+    /// `[min_ms, max_ms]` interval. The slider step is also in milliseconds.
+    ///
+    /// The [`TimeScale`] controls how the date labels on the slider handles
+    /// are formatted.
+    DateRange {
+        /// Lower bound in milliseconds since Unix epoch.
+        min_ms: f64,
+        /// Upper bound in milliseconds since Unix epoch.
+        max_ms: f64,
+        /// Step size in milliseconds (e.g. `86_400_000.0` for one day).
+        step_ms: f64,
+        /// Display resolution for the slider handle labels.
+        scale: TimeScale,
+    },
 }
 
 /// A declarative filter definition attached to a page.
@@ -1271,7 +1388,7 @@ impl FilterSpec {
     /// N rows sorted by the filter's column. `max_n` sets the slider's upper
     /// bound. If `descending` is `true`, the highest values are kept; if
     /// `false`, the lowest.
-    #[must_use] 
+    #[must_use]
     pub fn top_n(
         source_key: &str,
         column: &str,
@@ -1284,6 +1401,35 @@ impl FilterSpec {
             column: column.into(),
             label: label.into(),
             config: FilterConfig::TopN { max_n, descending },
+        }
+    }
+
+    /// Create a date-range slider filter.
+    ///
+    /// Produces a Bokeh `DateRangeSlider` widget. Data values in `column`
+    /// must be stored as **milliseconds since the Unix epoch** (e.g. the
+    /// output of `datetime.timestamp() * 1000` in Python or
+    /// `SystemTime::UNIX_EPOCH.elapsed()?.as_millis()` in Rust).
+    ///
+    /// * `min_ms` / `max_ms` — slider bounds in milliseconds.
+    /// * `step_ms` — slider step in milliseconds (e.g. `86_400_000.0` for
+    ///   one day).
+    /// * `scale` — controls how handle labels are formatted on the widget.
+    #[must_use]
+    pub fn date_range(
+        source_key: &str,
+        column: &str,
+        label: &str,
+        min_ms: f64,
+        max_ms: f64,
+        step_ms: f64,
+        scale: TimeScale,
+    ) -> Self {
+        Self {
+            source_key: source_key.into(),
+            column: column.into(),
+            label: label.into(),
+            config: FilterConfig::DateRange { min_ms, max_ms, step_ms, scale },
         }
     }
 }

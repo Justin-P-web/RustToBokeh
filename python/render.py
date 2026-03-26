@@ -29,6 +29,7 @@ from bokeh.models import (
     NumeralTickFormatter,
     Range1d,
     RangeSlider,
+    RangeTool,
     Select,
     Slider,
     Switch,
@@ -265,7 +266,7 @@ def build_grouped_bar(spec, source_cache, view=None):
     return fig
 
 
-def build_line_multi(spec, source_cache, view=None):
+def build_line_multi(spec, source_cache, view=None, x_range=None):
     key = spec["source_key"]
     df = dataframes[key]
     x_col = spec["x_col"]
@@ -283,7 +284,11 @@ def build_line_multi(spec, source_cache, view=None):
         tools = "pan,wheel_zoom,box_zoom,reset,save,hover,box_select,tap"
 
     ts = _x_axis_time_scale(spec)
-    if ts:
+    if x_range is not None:
+        # Range1d provided by a RangeTool spec — use it as the detail view
+        kw = _figure_kw(spec, x_axis_type="datetime" if ts else None)
+        kw["x_range"] = x_range
+    elif ts:
         # Datetime x axis: use Range1d so Bokeh renders datetime ticks correctly
         vals = df[x_col].to_list()
         kw = _figure_kw(spec, x_axis_type="datetime")
@@ -355,7 +360,7 @@ def build_hbar(spec, source_cache, view=None):
     return fig
 
 
-def build_scatter(spec, source_cache, view=None):
+def build_scatter(spec, source_cache, view=None, x_range=None):
     key = spec["source_key"]
     x_col = spec["x_col"]
     y_col = spec["y_col"]
@@ -370,6 +375,8 @@ def build_scatter(spec, source_cache, view=None):
 
     ts = _x_axis_time_scale(spec)
     kw = _figure_kw(spec, x_axis_type="datetime" if ts else None)
+    if x_range is not None:
+        kw["x_range"] = x_range
     kw["tools"] = tools
     fig = figure(**kw)
     if hover:
@@ -390,6 +397,46 @@ def build_scatter(spec, source_cache, view=None):
 
     _apply_axis_config(spec.get("x_axis"), fig.xaxis[0], fig.x_range, fig.xgrid[0])
     _apply_axis_config(spec.get("y_axis"), fig.yaxis[0], fig.y_range, fig.ygrid[0])
+    return fig
+
+
+def build_range_tool_overview(rt_spec, source_cache, shared_x_range):
+    """Build a compact navigator chart with a RangeTool attached.
+
+    The returned figure shows ``rt_spec["y_column"]`` plotted over the full
+    x extent.  A ``RangeTool`` overlay lets the user drag to update
+    ``shared_x_range``, which is linked to the detail charts above.
+    """
+    source_key = rt_spec["source_key"]
+    x_col = rt_spec["column"]
+    y_col = rt_spec["y_column"]
+    time_scale = rt_spec.get("time_scale")
+
+    source = _get_flat_source(source_key, source_cache)
+
+    kw = {
+        "title": rt_spec["label"],
+        "height": 130,
+        "toolbar_location": None,
+        "sizing_mode": "stretch_width",
+    }
+    if time_scale:
+        kw["x_axis_type"] = "datetime"
+        vals = source.data[x_col]
+        kw["x_range"] = Range1d(start=min(vals), end=max(vals))
+    else:
+        kw["x_range"] = list(source.data[x_col])
+
+    fig = figure(**kw)
+    fig.line(x=x_col, y=y_col, source=source, color=_PALETTE[0], line_width=1)
+    if time_scale:
+        fig.xaxis.formatter = _datetime_formatter(time_scale)
+
+    range_tool = RangeTool(x_range=shared_x_range)
+    range_tool.overlay.fill_color = "#4C72B0"
+    range_tool.overlay.fill_alpha = 0.2
+    fig.add_tools(range_tool)
+
     return fig
 
 
@@ -750,15 +797,74 @@ for page in pages:
     bokeh_figs = []    # Bokeh figure objects in encounter order
     renderables = []   # unified list: {"type", "div"/"figure", "grid", "title", "module_type"}
 
+    # Separate RangeTool specs (x-axis range sync) from CDSView filter specs.
+    page_filters = page.get("filters", [])
+    range_tool_specs = [f for f in page_filters if f["kind"] == "range_tool"]
+    cds_filters = [f for f in page_filters if f["kind"] != "range_tool"]
+
+    # Build one shared Range1d per source_key that has a RangeTool spec.
+    range_tool_x_ranges = {}
+    for rt in range_tool_specs:
+        sk = rt["source_key"]
+        range_tool_x_ranges[sk] = Range1d(start=rt["start"], end=rt["end"])
+
     # Pre-populate flat sources for any source_key referenced by filtered specs,
     # so that build_filter_objects can find them in the cache.
-    page_filters = page.get("filters", [])
-    filtered_keys = {f["source_key"] for f in page_filters}
+    filtered_keys = {f["source_key"] for f in cds_filters}
+    # Also pre-populate sources needed for range_tool overview charts.
+    for rt in range_tool_specs:
+        filtered_keys.add(rt["source_key"])
     for key in filtered_keys:
         _get_flat_source(key, source_cache)
 
-    # Build filter objects and CDSViews
-    views, filter_widgets = build_filter_objects(page_filters, source_cache)
+    # Build filter objects and CDSViews (range_tool is excluded — it is not
+    # a CDSView filter).
+    views, filter_widgets = build_filter_objects(cds_filters, source_cache)
+
+    # For each RangeTool spec, add a BooleanFilter driven by the shared Range1d
+    # so that charts marked .filtered() only show rows within the current date
+    # window.  The callback fires whenever the Range1d start or end changes
+    # (i.e. when the user drags the navigator overlay).
+    for rt in range_tool_specs:
+        sk = rt["source_key"]
+        x_col = rt["column"]
+        shared_x_range = range_tool_x_ranges[sk]
+
+        source = source_cache.get(sk)
+        if source is None:
+            continue
+
+        n = len(list(source.data.values())[0])
+        bf = BooleanFilter(booleans=[True] * n)
+
+        callback = CustomJS(
+            args=dict(bf=bf, source=source, col=x_col),
+            code="""
+                const lo = cb_obj.start;
+                const hi = cb_obj.end;
+                const data = source.data[col];
+                bf.booleans = data.map(v => v >= lo && v <= hi);
+                source.change.emit();
+            """,
+        )
+        shared_x_range.js_on_change("start", callback)
+        shared_x_range.js_on_change("end", callback)
+
+        # Merge the new BooleanFilter into any existing CDSView for this source
+        # so that it combines with other filters (e.g. a Select dropdown).
+        if sk in views:
+            existing = views[sk].filter
+            if isinstance(existing, AllIndices):
+                views[sk] = CDSView(filter=bf)
+            elif isinstance(existing, IntersectionFilter):
+                existing.operands.append(bf)
+            else:
+                views[sk] = CDSView(filter=IntersectionFilter(operands=[existing, bf]))
+        else:
+            views[sk] = CDSView(filter=bf)
+
+    # Index range_tool specs by source_key for O(1) lookup.
+    range_tool_by_source = {rt["source_key"]: rt for rt in range_tool_specs}
 
     for mod in page["modules"]:
         grid = {
@@ -773,7 +879,19 @@ for page in pages:
             if builder is None:
                 raise ValueError(f"Unknown chart_type: {mod['chart_type']!r}")
             view = views.get(mod["source_key"]) if mod.get("filtered") else None
-            fig = builder(mod, source_cache, view=view)
+            # Pass the shared Range1d only when the chart's x column matches
+            # the range_tool's x column.  Scatter charts that use a different
+            # x column (e.g. "temperature" vs the range_tool's "timestamp_ms")
+            # must NOT receive the datetime Range1d or all their points will
+            # fall outside the visible window.
+            rt_x_range = None
+            if mod["chart_type"] in ("line_multi", "scatter"):
+                rt = range_tool_by_source.get(mod["source_key"])
+                if rt is not None and mod.get("x_col") == rt["column"]:
+                    rt_x_range = range_tool_x_ranges[mod["source_key"]]
+            fig = builder(mod, source_cache, view=view, x_range=rt_x_range) \
+                if rt_x_range is not None \
+                else builder(mod, source_cache, view=view)
             bokeh_figs.append(fig)
             renderables.append({
                 "type": "bokeh",
@@ -800,6 +918,29 @@ for page in pages:
             })
         else:
             raise ValueError(f"Unknown module_type: {mtype!r}")
+
+    # Append auto-generated RangeTool overview charts below the grid.
+    if range_tool_specs:
+        max_row = max(
+            (r["grid"]["grid_row"] for r in renderables if r["type"] == "bokeh"),
+            default=0,
+        )
+        grid_cols = page["grid_cols"]
+        for i, rt in enumerate(range_tool_specs):
+            shared_x_range = range_tool_x_ranges[rt["source_key"]]
+            overview_fig = build_range_tool_overview(rt, source_cache, shared_x_range)
+            bokeh_figs.append(overview_fig)
+            renderables.append({
+                "type": "bokeh",
+                "figure": overview_fig,
+                "grid": {
+                    "grid_row": max_row + 1 + i,
+                    "grid_col": 1,
+                    "grid_col_span": grid_cols,
+                },
+                "title": rt["label"],
+                "module_type": "chart",
+            })
 
     # Flatten filter widgets — Switch widgets are wrapped in a dict with label
     flat_widgets = []

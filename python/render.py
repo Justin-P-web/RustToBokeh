@@ -821,6 +821,9 @@ for page in pages:
     # a CDSView filter).
     views, filter_widgets = build_filter_objects(cds_filters, source_cache)
 
+    # Index range_tool specs by source_key for O(1) lookup.
+    range_tool_by_source = {rt["source_key"]: rt for rt in range_tool_specs}
+
     for mod in page["modules"]:
         grid = {
             "grid_row": mod["grid_row"] + 1,
@@ -834,12 +837,16 @@ for page in pages:
             if builder is None:
                 raise ValueError(f"Unknown chart_type: {mod['chart_type']!r}")
             view = views.get(mod["source_key"]) if mod.get("filtered") else None
-            # Pass the shared Range1d for line/scatter charts when a RangeTool
-            # has been declared for this source.  grouped_bar and hbar use
-            # categorical x axes so they are unaffected.
+            # Pass the shared Range1d only when the chart's x column matches
+            # the range_tool's x column.  Scatter charts that use a different
+            # x column (e.g. "temperature" vs the range_tool's "timestamp_ms")
+            # must NOT receive the datetime Range1d or all their points will
+            # fall outside the visible window.
             rt_x_range = None
             if mod["chart_type"] in ("line_multi", "scatter"):
-                rt_x_range = range_tool_x_ranges.get(mod["source_key"])
+                rt = range_tool_by_source.get(mod["source_key"])
+                if rt is not None and mod.get("x_col") == rt["column"]:
+                    rt_x_range = range_tool_x_ranges[mod["source_key"]]
             fig = builder(mod, source_cache, view=view, x_range=rt_x_range) \
                 if rt_x_range is not None \
                 else builder(mod, source_cache, view=view)

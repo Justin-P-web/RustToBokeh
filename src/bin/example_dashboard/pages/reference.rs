@@ -5,6 +5,7 @@ type Line = LineConfig;
 type Scat = ScatterConfig;
 type Bar = GroupedBarConfig;
 type HB = HBarConfig;
+type Hist = HistogramConfig;
 type Para = ParagraphSpec;
 type Pie = PieConfig;
 type Tbl = TableSpec;
@@ -451,6 +452,26 @@ pub fn page_pie_donut_charts() -> Result<Page, ChartError> {
             )
             .at(0, 1, 1)
             .dimensions(380, 380)
+            .build(),
+        )
+        .build()
+}
+
+pub fn page_histogram_demo() -> Result<Page, ChartError> {
+    PageBuilder::new("histogram-demo", "Histogram Demo", "Histogram", 2)
+        .category("Reference")
+        .chart(
+            C::histogram(
+                "Salary Distribution",
+                "salary_distribution",
+                Hist::builder()
+                    .value("salary")
+                    .x_label("Salary (k)")
+                    .y_label("Employees")
+                    .num_bins(12)
+                    .build()?,
+            )
+            .at(0, 0, 2)
             .build(),
         )
         .build()

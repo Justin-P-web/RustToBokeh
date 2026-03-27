@@ -535,12 +535,60 @@ def build_range_tool_overview(rt_spec, source_cache, shared_x_range):
     return fig
 
 
+def build_histogram(spec, source_cache, view=None):
+    import numpy as np
+    key = spec["source_key"]
+    df = dataframes[key]
+    val_col = spec["value_col"]
+    num_bins = spec.get("num_bins", 10)
+
+    values = df[val_col].drop_nulls().to_numpy()
+    counts, edges = np.histogram(values, bins=num_bins)
+
+    source = ColumnDataSource(dict(
+        top=counts.tolist(),
+        left=edges[:-1].tolist(),
+        right=edges[1:].tolist(),
+    ))
+
+    hover = _build_hover_tool(spec)
+    tools = "pan,wheel_zoom,box_zoom,reset,save,box_select,tap"
+    if hover is None:
+        tools = "pan,wheel_zoom,box_zoom,reset,save,hover,box_select,tap"
+
+    kw = _figure_kw(spec)
+    kw["tools"] = tools
+    fig = figure(**kw)
+    if hover:
+        fig.add_tools(hover)
+
+    fig.quad(
+        top="top",
+        bottom=0,
+        left="left",
+        right="right",
+        source=source,
+        fill_color=spec.get("color", "#4C72B0"),
+        line_color=spec.get("line_color", "white"),
+        fill_alpha=spec.get("alpha", 0.7),
+        selection_fill_color="firebrick",
+        nonselection_fill_alpha=0.2,
+    )
+    fig.xaxis.axis_label = spec.get("x_label", "")
+    fig.yaxis.axis_label = spec.get("y_label", "Count")
+
+    _apply_axis_config(spec.get("x_axis"), fig.xaxis[0], fig.x_range, fig.xgrid[0])
+    _apply_axis_config(spec.get("y_axis"), fig.yaxis[0], fig.y_range, fig.ygrid[0])
+    return fig
+
+
 _BUILDERS = {
     "grouped_bar": build_grouped_bar,
     "line_multi": build_line_multi,
     "hbar": build_hbar,
     "scatter": build_scatter,
     "pie": build_pie,
+    "histogram": build_histogram,
 }
 
 # ── Non-chart module builders ────────────────────────────────────────────────

@@ -21,6 +21,7 @@ fn register_dataframes(dash: &mut Dashboard) -> Result<(), ChartError> {
     dash.add_df("quarterly_trends", &mut data::build_quarterly_trends())?;
     dash.add_df("marketing_channels", &mut data::build_marketing_channels())?;
     dash.add_df("sensor_events", &mut data::build_sensor_events())?;
+    dash.add_df("salary_distribution", &mut data::build_salary_distribution())?;
     Ok(())
 }
 
@@ -58,6 +59,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     dash.add_page(pages::page_time_series_events()?);
     dash.add_page(pages::page_range_tool_demo()?);
     dash.add_page(pages::page_pie_donut_charts()?);
+    dash.add_page(pages::page_histogram_demo()?);
 
     dash.render()?;
     Ok(())

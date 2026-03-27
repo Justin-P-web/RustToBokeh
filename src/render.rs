@@ -239,6 +239,9 @@ fn build_py_chart_config<'py>(
             if let Some(show) = c.show_legend {
                 m.set_item("show_legend", show)?;
             }
+            if let Some(side) = &c.legend_side {
+                m.set_item("legend_side", side.as_str())?;
+            }
         }
         ChartConfig::Histogram(c) => {
             m.set_item("x_label", &c.x_label)?;

@@ -434,11 +434,13 @@ def build_pie(spec, source_cache, view=None):
         "color": palette,
     })
 
+    legend_side = spec.get("legend_side", "right")
+
     kw = {
         "title": spec["title"],
         "toolbar_location": "above",
         "height": spec["height"] if spec.get("height") else 400,
-        "x_range": (-1.2, 1.2),
+        "x_range": (-1.8, 1.2) if legend_side == "left" else (-1.2, 1.8),
         "y_range": (-1.2, 1.2),
     }
     if spec.get("width"):
@@ -489,8 +491,9 @@ def build_pie(spec, source_cache, view=None):
     if spec.get("show_legend", True) is False:
         fig.legend.visible = False
     else:
-        fig.legend.location = "top_right"
+        fig.legend.location = "center_left" if legend_side == "left" else "center_right"
         fig.legend.label_text_font_size = "10pt"
+        fig.legend.click_policy = "hide"
 
     return fig
 

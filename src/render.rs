@@ -241,11 +241,8 @@ fn build_py_chart_config<'py>(
             }
         }
         ChartConfig::Histogram(c) => {
-            m.set_item("value_col", &c.value_col)?;
             m.set_item("x_label", &c.x_label)?;
-            if let Some(n) = c.num_bins {
-                m.set_item("num_bins", n)?;
-            }
+            m.set_item("display", c.display.as_ref().map_or("count", |d| d.as_str()))?;
             if let Some(s) = &c.y_label {
                 m.set_item("y_label", s)?;
             }

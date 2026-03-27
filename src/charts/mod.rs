@@ -39,7 +39,7 @@ pub use charts::{
     ChartConfig, ChartSpec, ChartSpecBuilder, GridCell, MAX_GRID_COLS,
     GroupedBarConfig, GroupedBarConfigBuilder,
     HBarConfig, HBarConfigBuilder,
-    HistogramConfig, HistogramConfigBuilder,
+    HistogramConfig, HistogramConfigBuilder, HistogramDisplay,
     LineConfig, LineConfigBuilder,
     PieConfig, PieConfigBuilder,
     ScatterConfig, ScatterConfigBuilder,

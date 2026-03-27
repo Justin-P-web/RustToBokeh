@@ -462,16 +462,39 @@ pub fn page_histogram_demo() -> Result<Page, ChartError> {
         .category("Reference")
         .chart(
             C::histogram(
-                "Salary Distribution",
-                "salary_distribution",
+                "Salary Distribution — Count",
+                "salary_hist",
                 Hist::builder()
-                    .value("salary")
                     .x_label("Salary (k)")
-                    .y_label("Employees")
-                    .num_bins(12)
                     .build()?,
             )
-            .at(0, 0, 2)
+            .at(0, 0, 1)
+            .build(),
+        )
+        .chart(
+            C::histogram(
+                "Salary Distribution — Density (PDF)",
+                "salary_hist",
+                Hist::builder()
+                    .x_label("Salary (k)")
+                    .display(HistogramDisplay::Pdf)
+                    .color("#2ecc71")
+                    .build()?,
+            )
+            .at(0, 1, 1)
+            .build(),
+        )
+        .chart(
+            C::histogram(
+                "Salary Distribution — Cumulative (CDF)",
+                "salary_hist",
+                Hist::builder()
+                    .x_label("Salary (k)")
+                    .display(HistogramDisplay::Cdf)
+                    .color("#e74c3c")
+                    .build()?,
+            )
+            .at(1, 0, 2)
             .build(),
         )
         .build()

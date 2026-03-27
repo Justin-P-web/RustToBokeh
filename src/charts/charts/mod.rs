@@ -8,7 +8,7 @@ pub mod spec;
 
 pub use grouped_bar::{GroupedBarConfig, GroupedBarConfigBuilder};
 pub use hbar::{HBarConfig, HBarConfigBuilder};
-pub use histogram::{HistogramConfig, HistogramConfigBuilder};
+pub use histogram::{HistogramConfig, HistogramConfigBuilder, HistogramDisplay};
 pub use line::{LineConfig, LineConfigBuilder};
 pub use pie::{PieConfig, PieConfigBuilder};
 pub use scatter::{ScatterConfig, ScatterConfigBuilder};

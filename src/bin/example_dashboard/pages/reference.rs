@@ -73,11 +73,11 @@ pub fn page_module_showcase() -> Result<Page, ChartError> {
         .build()
 }
 
-pub fn page_chart_customisation() -> Result<Page, ChartError> {
+pub fn page_chart_customization() -> Result<Page, ChartError> {
     PageBuilder::new(
-        "chart-customisation",
-        "Chart Customisation",
-        "Customisation",
+        "chart-customization",
+        "Chart Customization",
+        "Customization",
         2,
     )
     .category("Reference")
@@ -360,6 +360,7 @@ pub fn page_time_series_events() -> Result<Page, ChartError> {
                     .build()?,
             )
             .at(1, 0, 2)
+            .filtered()
             .build(),
         )
         .chart(

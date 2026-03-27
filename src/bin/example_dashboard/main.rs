@@ -54,7 +54,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     dash.add_page(pages::page_forecast_targets()?);
     dash.add_page(pages::page_annual_review()?);
     dash.add_page(pages::page_module_showcase()?);
-    dash.add_page(pages::page_chart_customisation()?);
+    dash.add_page(pages::page_chart_customization()?);
     dash.add_page(pages::page_time_series_events()?);
     dash.add_page(pages::page_range_tool_demo()?);
 

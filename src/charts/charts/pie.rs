@@ -49,6 +49,9 @@ pub struct PieConfig {
     pub tooltips: Option<TooltipSpec>,
     /// Whether to show the legend.  Defaults to `true` when `None`.
     pub show_legend: Option<bool>,
+    /// Which side to place the legend: `"left"` or `"right"`.
+    /// Defaults to `"right"` when `None`.
+    pub legend_side: Option<String>,
 }
 
 /// Builder for [`PieConfig`].
@@ -62,6 +65,7 @@ pub struct PieConfigBuilder {
     palette: Option<PaletteSpec>,
     tooltips: Option<TooltipSpec>,
     show_legend: Option<bool>,
+    legend_side: Option<String>,
 }
 
 impl PieConfig {
@@ -75,6 +79,7 @@ impl PieConfig {
             palette: None,
             tooltips: None,
             show_legend: None,
+            legend_side: None,
         }
     }
 }
@@ -125,6 +130,13 @@ impl PieConfigBuilder {
         self
     }
 
+    /// Place the legend on `"left"` or `"right"` (default `"right"`).
+    #[must_use]
+    pub fn legend_side(mut self, side: &str) -> Self {
+        self.legend_side = Some(side.into());
+        self
+    }
+
     /// Build the config, returning an error if any required field is missing.
     ///
     /// # Errors
@@ -138,6 +150,7 @@ impl PieConfigBuilder {
             palette: self.palette,
             tooltips: self.tooltips,
             show_legend: self.show_legend,
+            legend_side: self.legend_side,
         })
     }
 }
@@ -189,6 +202,7 @@ mod tests {
         assert!(cfg.palette.is_none());
         assert!(cfg.tooltips.is_none());
         assert!(cfg.show_legend.is_none());
+        assert!(cfg.legend_side.is_none());
     }
 
     #[test]
@@ -261,5 +275,26 @@ mod tests {
             .build()
             .unwrap();
         assert_eq!(cfg.show_legend, Some(true));
+    }
+
+    #[test]
+    fn pie_legend_side_default_none() {
+        let cfg = PieConfig::builder()
+            .label("l")
+            .value("v")
+            .build()
+            .unwrap();
+        assert!(cfg.legend_side.is_none());
+    }
+
+    #[test]
+    fn pie_legend_side_left() {
+        let cfg = PieConfig::builder()
+            .label("l")
+            .value("v")
+            .legend_side("left")
+            .build()
+            .unwrap();
+        assert_eq!(cfg.legend_side, Some("left".into()));
     }
 }

@@ -6,6 +6,7 @@ type Scat = ScatterConfig;
 type Bar = GroupedBarConfig;
 type HB = HBarConfig;
 type Hist = HistogramConfig;
+type BP = BoxPlotConfig;
 type Para = ParagraphSpec;
 type Pie = PieConfig;
 type Tbl = TableSpec;
@@ -495,6 +496,32 @@ pub fn page_histogram_demo() -> Result<Page, ChartError> {
                     .build()?,
             )
             .at(1, 0, 2)
+            .build(),
+        )
+        .build()
+}
+
+pub fn page_box_plot_demo() -> Result<Page, ChartError> {
+    PageBuilder::new("box-plot-demo", "Box Plot Demo", "Box Plot", 2)
+        .category("Reference")
+        .chart(
+            C::box_plot(
+                "Salary Distribution by Department",
+                "salary_box",
+                BP::builder()
+                    .category("category")
+                    .q1("q1")
+                    .q2("q2")
+                    .q3("q3")
+                    .lower("lower")
+                    .upper("upper")
+                    .y_label("Salary (k USD)")
+                    .palette(PaletteSpec::Named("Set2".into()))
+                    .outlier_source("salary_outliers")
+                    .outlier_value_col("salary_k")
+                    .build()?,
+            )
+            .at(0, 0, 2)
             .build(),
         )
         .build()

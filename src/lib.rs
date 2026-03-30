@@ -68,9 +68,9 @@ pub mod prelude;
 mod render;
 
 pub use charts::{
-    AxisConfig, AxisConfigBuilder, ChartConfig, ChartSpec, ChartSpecBuilder, FilterConfig,
-    FilterSpec, GridCell, GroupedBarConfig, GroupedBarConfigBuilder, HBarConfig,
-    HBarConfigBuilder, LineConfig, LineConfigBuilder, PaletteSpec, ScatterConfig,
+    AxisConfig, AxisConfigBuilder, BoxPlotConfig, BoxPlotConfigBuilder, ChartConfig, ChartSpec,
+    ChartSpecBuilder, FilterConfig, FilterSpec, GridCell, GroupedBarConfig, GroupedBarConfigBuilder,
+    HBarConfig, HBarConfigBuilder, LineConfig, LineConfigBuilder, PaletteSpec, ScatterConfig,
     ScatterConfigBuilder, TimeScale, TooltipField, TooltipFormat, TooltipSpec, TooltipSpecBuilder,
     MAX_GRID_COLS,
 };
@@ -206,6 +206,231 @@ pub fn compute_histogram(
         "count" => count_vals,
         "pdf"   => pdf,
         "cdf"   => cdf,
+    ]?)
+}
+
+/// Compute per-category box plot statistics from a raw category + value DataFrame.
+///
+/// Given a `DataFrame` with a categorical column and a numeric value column,
+/// this function groups by category (preserving first-appearance order) and
+/// returns a new `DataFrame` with six columns:
+///
+/// | Column     | Type | Description |
+/// |------------|------|-------------|
+/// | `category` | Utf8 | Category label (same values as `category_col`) |
+/// | `q1`       | f64  | 25th percentile |
+/// | `q2`       | f64  | 50th percentile (median) |
+/// | `q3`       | f64  | 75th percentile |
+/// | `lower`    | f64  | Lower whisker: min observed value ≥ Q1 − 1.5 × IQR |
+/// | `upper`    | f64  | Upper whisker: max observed value ≤ Q3 + 1.5 × IQR |
+///
+/// The result is intended to be registered with [`Dashboard::add_df`] and
+/// referenced by a [`ChartSpecBuilder::box_plot`](charts::ChartSpecBuilder::box_plot)
+/// spec using [`BoxPlotConfig`](charts::BoxPlotConfig).
+///
+/// # Example
+///
+/// ```ignore
+/// use rust_to_bokeh::prelude::*;
+/// use polars::prelude::*;
+///
+/// let raw = df![
+///     "department" => ["Eng", "Sales", "Eng", "Sales"],
+///     "salary"     => [95.0f64, 70.0, 105.0, 80.0],
+/// ].unwrap();
+/// let mut stats = compute_box_stats(&raw, "department", "salary")?;
+/// dash.add_df("salary_box", &mut stats)?;
+/// ```
+///
+/// # Errors
+///
+/// Returns [`ChartError::Serialization`] if the columns do not exist or the
+/// value column cannot be cast to `f64`.
+pub fn compute_box_stats(
+    df: &DataFrame,
+    category_col: &str,
+    value_col: &str,
+) -> Result<DataFrame, ChartError> {
+    use polars::prelude::*;
+
+    fn quantile_linear(sorted: &[f64], q: f64) -> f64 {
+        if sorted.len() == 1 {
+            return sorted[0];
+        }
+        let idx = q * (sorted.len() - 1) as f64;
+        let lo = idx.floor() as usize;
+        let hi = idx.ceil() as usize;
+        if lo == hi {
+            sorted[lo]
+        } else {
+            let frac = idx - lo as f64;
+            sorted[lo] * (1.0 - frac) + sorted[hi] * frac
+        }
+    }
+
+    let cat_series = df.column(category_col)?;
+    let val_series = df.column(value_col)?;
+    let val_f64 = val_series.cast(&DataType::Float64)?;
+    let cat_str_ca = cat_series.str()?;
+
+    // Collect unique categories in first-appearance order.
+    let mut seen = std::collections::HashSet::new();
+    let mut unique_cats: Vec<String> = Vec::new();
+    for opt_s in cat_str_ca.iter() {
+        if let Some(s) = opt_s {
+            if seen.insert(s.to_string()) {
+                unique_cats.push(s.to_string());
+            }
+        }
+    }
+
+    let mut out_cats:  Vec<String> = Vec::new();
+    let mut out_q1:    Vec<f64>    = Vec::new();
+    let mut out_q2:    Vec<f64>    = Vec::new();
+    let mut out_q3:    Vec<f64>    = Vec::new();
+    let mut out_lower: Vec<f64>    = Vec::new();
+    let mut out_upper: Vec<f64>    = Vec::new();
+
+    for cat in &unique_cats {
+        let mask = cat_str_ca.equal(cat.as_str());
+        let filtered = val_f64.filter(&mask)?;
+        let filtered_ca = filtered.f64()?;
+        let mut vals: Vec<f64> = filtered_ca.into_no_null_iter().collect();
+
+        if vals.is_empty() {
+            continue;
+        }
+
+        vals.sort_by(|a, b| a.partial_cmp(b).unwrap_or(std::cmp::Ordering::Equal));
+
+        let q1  = quantile_linear(&vals, 0.25);
+        let q2  = quantile_linear(&vals, 0.50);
+        let q3  = quantile_linear(&vals, 0.75);
+        let iqr = q3 - q1;
+        let lo_fence = q1 - 1.5 * iqr;
+        let hi_fence = q3 + 1.5 * iqr;
+
+        // Whisker endpoints: most extreme observed values within the fences.
+        let lower = vals
+            .iter()
+            .cloned()
+            .filter(|&v| v >= lo_fence)
+            .fold(f64::INFINITY, f64::min);
+        let upper = vals
+            .iter()
+            .cloned()
+            .filter(|&v| v <= hi_fence)
+            .fold(f64::NEG_INFINITY, f64::max);
+
+        out_cats.push(cat.clone());
+        out_q1.push(q1);
+        out_q2.push(q2);
+        out_q3.push(q3);
+        out_lower.push(lower);
+        out_upper.push(upper);
+    }
+
+    Ok(df![
+        "category" => out_cats,
+        "q1"       => out_q1,
+        "q2"       => out_q2,
+        "q3"       => out_q3,
+        "lower"    => out_lower,
+        "upper"    => out_upper,
+    ]?)
+}
+
+/// Extract outlier rows from a raw DataFrame for use with box plots.
+///
+/// Returns a new `DataFrame` containing only the rows whose `value_col` value
+/// falls **outside** the Tukey IQR fences (Q1 − 1.5·IQR or Q3 + 1.5·IQR) for
+/// their respective category. The output columns are `category_col` and
+/// `value_col` (with the same names passed in), so the resulting DataFrame can
+/// be registered directly with [`Dashboard::add_df`] and referenced by
+/// [`BoxPlotConfig::outlier_source`](crate::BoxPlotConfig).
+///
+/// # Example
+///
+/// ```ignore
+/// let raw = data::build_salary_raw();
+/// let mut outliers = compute_box_outliers(&raw, "department", "salary_k")?;
+/// dash.add_df("salary_outliers", &mut outliers)?;
+/// ```
+///
+/// # Errors
+///
+/// Returns [`ChartError::Serialization`] if the columns do not exist or the
+/// value column cannot be cast to `f64`.
+pub fn compute_box_outliers(
+    df: &DataFrame,
+    category_col: &str,
+    value_col: &str,
+) -> Result<DataFrame, ChartError> {
+    use polars::prelude::*;
+
+    fn quantile_linear(sorted: &[f64], q: f64) -> f64 {
+        if sorted.len() == 1 {
+            return sorted[0];
+        }
+        let idx = q * (sorted.len() - 1) as f64;
+        let lo = idx.floor() as usize;
+        let hi = idx.ceil() as usize;
+        if lo == hi {
+            sorted[lo]
+        } else {
+            let frac = idx - lo as f64;
+            sorted[lo] * (1.0 - frac) + sorted[hi] * frac
+        }
+    }
+
+    let cat_series = df.column(category_col)?;
+    let val_series = df.column(value_col)?;
+    let val_f64 = val_series.cast(&DataType::Float64)?;
+    let cat_str_ca = cat_series.str()?;
+
+    // Collect unique categories in first-appearance order.
+    let mut seen = std::collections::HashSet::new();
+    let mut unique_cats: Vec<String> = Vec::new();
+    for opt_s in cat_str_ca.iter() {
+        if let Some(s) = opt_s {
+            if seen.insert(s.to_string()) {
+                unique_cats.push(s.to_string());
+            }
+        }
+    }
+
+    let mut out_cats: Vec<String> = Vec::new();
+    let mut out_vals: Vec<f64>    = Vec::new();
+
+    for cat in &unique_cats {
+        let mask = cat_str_ca.equal(cat.as_str());
+        let filtered = val_f64.filter(&mask)?;
+        let filtered_ca = filtered.f64()?;
+        let mut vals: Vec<f64> = filtered_ca.into_no_null_iter().collect();
+
+        if vals.is_empty() {
+            continue;
+        }
+
+        vals.sort_by(|a, b| a.partial_cmp(b).unwrap_or(std::cmp::Ordering::Equal));
+
+        let q1  = quantile_linear(&vals, 0.25);
+        let q3  = quantile_linear(&vals, 0.75);
+        let iqr = q3 - q1;
+        let lo_fence = q1 - 1.5 * iqr;
+        let hi_fence = q3 + 1.5 * iqr;
+
+        for v in vals {
+            if v < lo_fence || v > hi_fence {
+                out_cats.push(cat.clone());
+                out_vals.push(v);
+            }
+        }
+    }
+
+    Ok(df![
+        "category" => out_cats,
+        value_col  => out_vals,
     ]?)
 }
 

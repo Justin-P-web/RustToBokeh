@@ -1,3 +1,4 @@
+pub mod box_plot;
 pub mod grouped_bar;
 pub mod hbar;
 pub mod histogram;
@@ -6,6 +7,7 @@ pub mod pie;
 pub mod scatter;
 pub mod spec;
 
+pub use box_plot::{BoxPlotConfig, BoxPlotConfigBuilder};
 pub use grouped_bar::{GroupedBarConfig, GroupedBarConfigBuilder};
 pub use hbar::{HBarConfig, HBarConfigBuilder};
 pub use histogram::{HistogramConfig, HistogramConfigBuilder, HistogramDisplay};
@@ -44,6 +46,8 @@ pub enum ChartConfig {
     Pie(PieConfig),
     /// A histogram. See [`HistogramConfig`].
     Histogram(HistogramConfig),
+    /// A box-and-whisker plot. See [`BoxPlotConfig`].
+    BoxPlot(BoxPlotConfig),
 }
 
 impl ChartConfig {
@@ -58,6 +62,7 @@ impl ChartConfig {
             ChartConfig::Scatter(_) => "scatter",
             ChartConfig::Pie(_) => "pie",
             ChartConfig::Histogram(_) => "histogram",
+            ChartConfig::BoxPlot(_) => "box_plot",
         }
     }
 }

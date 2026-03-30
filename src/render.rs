@@ -268,6 +268,36 @@ fn build_py_chart_config<'py>(
                 m.set_item("y_axis", build_py_axis_config(py, ax)?)?;
             }
         }
+        ChartConfig::BoxPlot(c) => {
+            m.set_item("category_col", &c.category_col)?;
+            m.set_item("q1_col",       &c.q1_col)?;
+            m.set_item("q2_col",       &c.q2_col)?;
+            m.set_item("q3_col",       &c.q3_col)?;
+            m.set_item("lower_col",    &c.lower_col)?;
+            m.set_item("upper_col",    &c.upper_col)?;
+            m.set_item("y_label",      &c.y_label)?;
+            if let Some(col) = &c.color {
+                m.set_item("color", col)?;
+            }
+            if let Some(a) = c.alpha {
+                m.set_item("alpha", a)?;
+            }
+            if let Some(tt) = &c.tooltips {
+                m.set_item("tooltips", build_py_tooltip_spec(py, tt)?)?;
+            }
+            if let Some(ax) = &c.y_axis {
+                m.set_item("y_axis", build_py_axis_config(py, ax)?)?;
+            }
+            if let Some(p) = &c.palette {
+                m.set_item("palette", build_py_palette(py, p)?)?;
+            }
+            if let Some(key) = &c.outlier_source_key {
+                m.set_item("outlier_source_key", key)?;
+            }
+            if let Some(col) = &c.outlier_value_col {
+                m.set_item("outlier_value_col", col)?;
+            }
+        }
     }
     Ok(())
 }

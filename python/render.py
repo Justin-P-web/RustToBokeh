@@ -640,6 +640,139 @@ def build_histogram(spec, source_cache, view=None):
     return fig
 
 
+def build_box_plot(spec, source_cache, view=None):
+    """Render a box-and-whisker plot from a pre-computed statistics DataFrame.
+
+    Expects a DataFrame with one row per category containing columns for the
+    category label, Q1, Q2 (median), Q3, lower whisker fence, and upper
+    whisker fence.  Typically produced by compute_box_stats() on the Rust side.
+
+    Each box is drawn as:
+      - A vertical segment from lower fence to Q1 (lower whisker stem)
+      - A vertical segment from Q3 to upper fence (upper whisker stem)
+      - Small horizontal tick marks at each whisker endpoint (caps)
+      - A filled vbar from Q1 to Q3 (the IQR box)
+      - A bold horizontal segment at Q2 (the median line)
+    """
+    key       = spec["source_key"]
+    df        = dataframes[key]
+    cat_col   = spec["category_col"]
+    q1_col    = spec["q1_col"]
+    q2_col    = spec["q2_col"]
+    q3_col    = spec["q3_col"]
+    lower_col = spec["lower_col"]
+    upper_col = spec["upper_col"]
+
+    cats     = df[cat_col].to_list()
+    q1_vals  = df[q1_col].to_list()
+    q2_vals  = df[q2_col].to_list()
+    q3_vals  = df[q3_col].to_list()
+    lo_vals  = df[lower_col].to_list()
+    hi_vals  = df[upper_col].to_list()
+
+    fill_color = spec.get("color", "#4C72B0")
+    alpha      = spec.get("alpha", 0.7)
+    box_hw     = 0.35   # half-width of the box in FactorRange units
+    cap_hw     = 0.15   # half-width of whisker caps
+
+    # Bokeh (factor, offset) tuples for drawing horizontal segments on a
+    # categorical axis: offset is in FactorRange coordinate units.
+    median_x0 = [(c, -box_hw) for c in cats]
+    median_x1 = [(c,  box_hw) for c in cats]
+    cap_lo_x0 = [(c, -cap_hw) for c in cats]
+    cap_lo_x1 = [(c,  cap_hw) for c in cats]
+    cap_hi_x0 = [(c, -cap_hw) for c in cats]
+    cap_hi_x1 = [(c,  cap_hw) for c in cats]
+
+    source = ColumnDataSource({
+        cat_col:       cats,
+        q1_col:        q1_vals,
+        q2_col:        q2_vals,
+        q3_col:        q3_vals,
+        lower_col:     lo_vals,
+        upper_col:     hi_vals,
+        "_median_x0":  median_x0,
+        "_median_x1":  median_x1,
+        "_cap_lo_x0":  cap_lo_x0,
+        "_cap_lo_x1":  cap_lo_x1,
+        "_cap_hi_x0":  cap_hi_x0,
+        "_cap_hi_x1":  cap_hi_x1,
+    })
+
+    vkw = dict(view=view) if view else {}
+
+    hover = _build_hover_tool(spec)
+    tools = "pan,wheel_zoom,box_zoom,reset,save"
+    if hover is None:
+        tools += ",hover"
+
+    kw = _figure_kw(spec)
+    kw["x_range"] = FactorRange(*cats)
+    kw["tools"]   = tools
+
+    if hover is None:
+        kw["tooltips"] = [
+            ("Category",    f"@{{{cat_col}}}"),
+            ("Lower fence", f"@{{{lower_col}}}{{0.0}}"),
+            ("Q1 (25th %)", f"@{{{q1_col}}}{{0.0}}"),
+            ("Median",      f"@{{{q2_col}}}{{0.0}}"),
+            ("Q3 (75th %)", f"@{{{q3_col}}}{{0.0}}"),
+            ("Upper fence", f"@{{{upper_col}}}{{0.0}}"),
+        ]
+
+    fig = figure(**kw)
+    if hover:
+        fig.add_tools(hover)
+
+    # Whisker stems (vertical lines from IQR box edge to fence)
+    fig.segment(
+        x0=cat_col, x1=cat_col,
+        y0=q3_col,  y1=upper_col,
+        source=source, line_color="black", **vkw,
+    )
+    fig.segment(
+        x0=cat_col, x1=cat_col,
+        y0=lower_col, y1=q1_col,
+        source=source, line_color="black", **vkw,
+    )
+
+    # Whisker caps (short horizontal ticks at each fence endpoint)
+    fig.segment(
+        x0="_cap_hi_x0", x1="_cap_hi_x1",
+        y0=upper_col, y1=upper_col,
+        source=source, line_color="black", **vkw,
+    )
+    fig.segment(
+        x0="_cap_lo_x0", x1="_cap_lo_x1",
+        y0=lower_col, y1=lower_col,
+        source=source, line_color="black", **vkw,
+    )
+
+    # IQR box (Q1 to Q3)
+    fig.vbar(
+        x=cat_col, top=q3_col, bottom=q1_col,
+        width=box_hw * 2, source=source,
+        fill_color=fill_color, line_color="black",
+        fill_alpha=alpha,
+        selection_fill_color="firebrick",
+        nonselection_fill_alpha=0.2,
+        **vkw,
+    )
+
+    # Median line (horizontal segment across the box at Q2)
+    fig.segment(
+        x0="_median_x0", x1="_median_x1",
+        y0=q2_col, y1=q2_col,
+        source=source, line_color="black", line_width=2.5, **vkw,
+    )
+
+    fig.yaxis.axis_label = spec.get("y_label", "")
+    fig.xgrid.grid_line_color = None
+
+    _apply_axis_config(spec.get("y_axis"), fig.yaxis[0], fig.y_range, fig.ygrid[0])
+    return fig
+
+
 _BUILDERS = {
     "grouped_bar": build_grouped_bar,
     "line_multi": build_line_multi,
@@ -647,6 +780,7 @@ _BUILDERS = {
     "scatter": build_scatter,
     "pie": build_pie,
     "histogram": build_histogram,
+    "box_plot": build_box_plot,
 }
 
 # ── Non-chart module builders ────────────────────────────────────────────────

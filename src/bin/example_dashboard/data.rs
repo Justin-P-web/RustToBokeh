@@ -231,6 +231,50 @@ pub fn build_sensor_events() -> DataFrame {
     .expect("sensor_events")
 }
 
+/// Raw salary data (department, salary_k) for box plot statistics.
+///
+/// 10 salary data points per department across 6 departments — enough to
+/// produce meaningful quartiles and visible IQR differences between groups.
+pub fn build_salary_raw() -> DataFrame {
+    df![
+        "department" => [
+            "Engineering","Engineering","Engineering","Engineering","Engineering",
+            "Engineering","Engineering","Engineering","Engineering","Engineering",
+            "Sales","Sales","Sales","Sales","Sales",
+            "Sales","Sales","Sales","Sales","Sales",
+            "Marketing","Marketing","Marketing","Marketing","Marketing",
+            "Marketing","Marketing","Marketing","Marketing","Marketing",
+            "Finance","Finance","Finance","Finance","Finance",
+            "Finance","Finance","Finance","Finance","Finance",
+            "HR","HR","HR","HR","HR",
+            "HR","HR","HR","HR","HR",
+            "Operations","Operations","Operations","Operations","Operations",
+            "Operations","Operations","Operations","Operations","Operations",
+        ],
+        "salary_k" => [
+            // Engineering: 72–128k, median ~98k
+            72.0_f64, 80.0, 88.0, 92.0, 95.0,
+            100.0, 105.0, 112.0, 120.0, 128.0,
+            // Sales: 55–105k, median ~76k
+            55.0, 62.0, 68.0, 72.0, 75.0,
+            78.0, 83.0, 90.0, 98.0, 105.0,
+            // Marketing: 60–100k, median ~80k
+            60.0, 65.0, 70.0, 75.0, 78.0,
+            82.0, 86.0, 90.0, 95.0, 100.0,
+            // Finance: 70–118k, median ~92k
+            70.0, 75.0, 82.0, 87.0, 90.0,
+            95.0, 100.0, 106.0, 112.0, 118.0,
+            // HR: 50–82k, median ~64k
+            50.0, 54.0, 58.0, 61.0, 63.0,
+            65.0, 68.0, 72.0, 77.0, 82.0,
+            // Operations: 48–78k, median ~60k
+            48.0, 52.0, 56.0, 58.0, 60.0,
+            62.0, 65.0, 68.0, 72.0, 78.0,
+        ]
+    ]
+    .expect("salary_raw")
+}
+
 pub fn build_salary_distribution() -> DataFrame {
     df![
         "salary" => [

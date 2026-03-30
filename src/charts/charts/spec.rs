@@ -1,4 +1,5 @@
 use super::{ChartConfig, GridCell, ChartSpec};
+use super::box_plot::BoxPlotConfig;
 use super::grouped_bar::GroupedBarConfig;
 use super::hbar::HBarConfig;
 use super::histogram::HistogramConfig;
@@ -103,6 +104,16 @@ impl ChartSpecBuilder {
         Self::new(title, key, ChartConfig::Histogram(config))
     }
 
+    /// Create a box-and-whisker plot spec.
+    ///
+    /// The DataFrame referenced by `key` should contain pre-computed box
+    /// statistics. Use [`compute_box_stats`](crate::compute_box_stats) to
+    /// produce a compatible DataFrame from raw category + value data.
+    #[must_use]
+    pub fn box_plot(title: &str, key: &str, config: BoxPlotConfig) -> Self {
+        Self::new(title, key, ChartConfig::BoxPlot(config))
+    }
+
     /// Set the grid position and column span.
     ///
     /// `row` and `col` are zero-based indices into the page grid. `span`
@@ -160,6 +171,7 @@ impl ChartSpecBuilder {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::charts::charts::box_plot::BoxPlotConfig;
     use crate::charts::charts::grouped_bar::GroupedBarConfig;
     use crate::charts::charts::hbar::HBarConfig;
     use crate::charts::charts::line::LineConfig;
@@ -232,6 +244,35 @@ mod tests {
                 .unwrap(),
         );
         assert_eq!(cfg.chart_type_str(), "pie");
+    }
+
+    #[test]
+    fn chart_type_str_box_plot() {
+        let cfg = ChartConfig::BoxPlot(
+            BoxPlotConfig::builder()
+                .category("category")
+                .q1("q1").q2("q2").q3("q3")
+                .lower("lower").upper("upper")
+                .y_label("Y")
+                .build()
+                .unwrap(),
+        );
+        assert_eq!(cfg.chart_type_str(), "box_plot");
+    }
+
+    #[test]
+    fn chart_spec_builder_box_plot_constructor() {
+        let cfg = BoxPlotConfig::builder()
+            .category("category")
+            .q1("q1").q2("q2").q3("q3")
+            .lower("lower").upper("upper")
+            .y_label("Value")
+            .build()
+            .unwrap();
+        let spec = ChartSpecBuilder::box_plot("Salary by Dept", "salary_box", cfg).build();
+        assert_eq!(spec.config.chart_type_str(), "box_plot");
+        assert_eq!(spec.title, "Salary by Dept");
+        assert_eq!(spec.source_key, "salary_box");
     }
 
     #[test]

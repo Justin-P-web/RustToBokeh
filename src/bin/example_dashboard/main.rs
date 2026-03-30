@@ -29,6 +29,9 @@ fn register_dataframes(dash: &mut Dashboard) -> Result<(), ChartError> {
     dash.add_df("salary_box", &mut salary_box)?;
     let mut salary_outliers = compute_box_outliers(&salary_raw2, "department", "salary_k")?;
     dash.add_df("salary_outliers", &mut salary_outliers)?;
+    // Density plots: register raw long-format data directly (no pre-computation needed).
+    dash.add_df("salary_raw", &mut data::build_salary_raw())?;
+    dash.add_df("density_scores", &mut data::build_density_scores())?;
     Ok(())
 }
 
@@ -68,6 +71,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     dash.add_page(pages::page_pie_donut_charts()?);
     dash.add_page(pages::page_histogram_demo()?);
     dash.add_page(pages::page_box_plot_demo()?);
+    dash.add_page(pages::page_density_demo()?);
 
     dash.render()?;
     Ok(())

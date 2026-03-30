@@ -1,4 +1,5 @@
 use crate::charts::customization::axis::AxisConfig;
+use crate::charts::customization::palette::PaletteSpec;
 use crate::charts::customization::tooltip::TooltipSpec;
 use crate::error::ChartError;
 
@@ -53,7 +54,12 @@ pub struct BoxPlotConfig {
     pub upper_col: String,
     /// Label displayed on the Y axis.
     pub y_label: String,
-    /// Fill color for the IQR boxes as a hex string. Defaults to `"#4C72B0"`.
+    /// Color palette for the boxes — one color per category.
+    /// When set, each box gets a distinct color from the palette.
+    /// When `None` and `color` is also `None`, the default palette is used.
+    pub palette: Option<PaletteSpec>,
+    /// Single fill color for all IQR boxes as a hex string.
+    /// Ignored when `palette` is set. Defaults to the first palette color.
     pub color: Option<String>,
     /// Fill alpha (0.0 = transparent, 1.0 = opaque). Defaults to `0.7`.
     pub alpha: Option<f64>,
@@ -61,6 +67,15 @@ pub struct BoxPlotConfig {
     pub tooltips: Option<TooltipSpec>,
     /// Y-axis display configuration.
     pub y_axis: Option<AxisConfig>,
+    /// Source key for the outlier `DataFrame`.
+    ///
+    /// When set, the renderer loads the DataFrame registered under this key and
+    /// plots outlier values as scattered dots beyond the whisker endpoints.
+    /// Produce the DataFrame with [`compute_box_outliers`](crate::compute_box_outliers).
+    pub outlier_source_key: Option<String>,
+    /// Column name for the numeric values in the outlier DataFrame.
+    /// Must match the `value_col` passed to `compute_box_outliers`.
+    pub outlier_value_col: Option<String>,
 }
 
 /// Builder for [`BoxPlotConfig`].
@@ -75,10 +90,13 @@ pub struct BoxPlotConfigBuilder {
     lower_col: Option<String>,
     upper_col: Option<String>,
     y_label: Option<String>,
+    palette: Option<PaletteSpec>,
     color: Option<String>,
     alpha: Option<f64>,
     tooltips: Option<TooltipSpec>,
     y_axis: Option<AxisConfig>,
+    outlier_source_key: Option<String>,
+    outlier_value_col: Option<String>,
 }
 
 impl BoxPlotConfig {
@@ -93,10 +111,13 @@ impl BoxPlotConfig {
             lower_col: None,
             upper_col: None,
             y_label: None,
+            palette: None,
             color: None,
             alpha: None,
             tooltips: None,
             y_axis: None,
+            outlier_source_key: None,
+            outlier_value_col: None,
         }
     }
 }
@@ -151,7 +172,18 @@ impl BoxPlotConfigBuilder {
         self
     }
 
-    /// Set the fill color for the IQR boxes as a hex string.
+    /// Set a color palette — one distinct color per category.
+    ///
+    /// Accepts any [`PaletteSpec`]: a named Bokeh palette (e.g. `"Set2"`) or
+    /// a custom list of hex strings. When set, the `color` field is ignored.
+    #[must_use]
+    pub fn palette(mut self, palette: PaletteSpec) -> Self {
+        self.palette = Some(palette);
+        self
+    }
+
+    /// Set a single fill color for all IQR boxes as a hex string.
+    /// Ignored when `palette` is set.
     #[must_use]
     pub fn color(mut self, color: &str) -> Self {
         self.color = Some(color.into());
@@ -179,6 +211,28 @@ impl BoxPlotConfigBuilder {
         self
     }
 
+    /// Set the source key for the outlier DataFrame.
+    ///
+    /// When set, the renderer plots outlier data points as scattered dots
+    /// beyond the whisker ends. Produce the DataFrame with
+    /// [`compute_box_outliers`](crate::compute_box_outliers) and register it
+    /// under the given key via `dash.add_df(key, &mut df)`.
+    #[must_use]
+    pub fn outlier_source(mut self, key: &str) -> Self {
+        self.outlier_source_key = Some(key.into());
+        self
+    }
+
+    /// Set the column name for the numeric values in the outlier DataFrame.
+    ///
+    /// Must match the `value_col` argument passed to
+    /// [`compute_box_outliers`](crate::compute_box_outliers).
+    #[must_use]
+    pub fn outlier_value_col(mut self, col: &str) -> Self {
+        self.outlier_value_col = Some(col.into());
+        self
+    }
+
     /// Build the config, returning an error if any required field is missing.
     ///
     /// # Errors
@@ -193,10 +247,13 @@ impl BoxPlotConfigBuilder {
             lower_col:    self.lower_col.ok_or(ChartError::MissingField("lower_col"))?,
             upper_col:    self.upper_col.ok_or(ChartError::MissingField("upper_col"))?,
             y_label:      self.y_label.ok_or(ChartError::MissingField("y_label"))?,
-            color:        self.color,
-            alpha:        self.alpha,
-            tooltips:     self.tooltips,
-            y_axis:       self.y_axis,
+            palette:            self.palette,
+            color:              self.color,
+            alpha:              self.alpha,
+            tooltips:           self.tooltips,
+            y_axis:             self.y_axis,
+            outlier_source_key: self.outlier_source_key,
+            outlier_value_col:  self.outlier_value_col,
         })
     }
 }
@@ -323,10 +380,13 @@ mod tests {
     #[test]
     fn optional_fields_default_none() {
         let cfg = minimal();
+        assert!(cfg.palette.is_none());
         assert!(cfg.color.is_none());
         assert!(cfg.alpha.is_none());
         assert!(cfg.tooltips.is_none());
         assert!(cfg.y_axis.is_none());
+        assert!(cfg.outlier_source_key.is_none());
+        assert!(cfg.outlier_value_col.is_none());
     }
 
     // ── Optional field setters ────────────────────────────────────────────────
@@ -365,6 +425,31 @@ mod tests {
         let y = cfg.y_axis.as_ref().unwrap();
         assert_eq!(y.tick_format.as_deref(), Some("0.0"));
         assert!(!y.show_grid);
+    }
+
+    #[test]
+    fn with_palette() {
+        use crate::charts::customization::palette::PaletteSpec;
+        let cfg = BoxPlotConfig::builder()
+            .category("category").q1("q1").q2("q2").q3("q3")
+            .lower("lower").upper("upper").y_label("Y")
+            .palette(PaletteSpec::Named("Set2".into()))
+            .build()
+            .unwrap();
+        assert!(matches!(cfg.palette, Some(PaletteSpec::Named(_))));
+    }
+
+    #[test]
+    fn with_outlier_fields() {
+        let cfg = BoxPlotConfig::builder()
+            .category("category").q1("q1").q2("q2").q3("q3")
+            .lower("lower").upper("upper").y_label("Y")
+            .outlier_source("salary_outliers")
+            .outlier_value_col("salary_k")
+            .build()
+            .unwrap();
+        assert_eq!(cfg.outlier_source_key.as_deref(), Some("salary_outliers"));
+        assert_eq!(cfg.outlier_value_col.as_deref(), Some("salary_k"));
     }
 
     #[test]

@@ -27,6 +27,8 @@ fn register_dataframes(dash: &mut Dashboard) -> Result<(), ChartError> {
     let salary_raw2 = data::build_salary_raw();
     let mut salary_box = compute_box_stats(&salary_raw2, "department", "salary_k")?;
     dash.add_df("salary_box", &mut salary_box)?;
+    let mut salary_outliers = compute_box_outliers(&salary_raw2, "department", "salary_k")?;
+    dash.add_df("salary_outliers", &mut salary_outliers)?;
     Ok(())
 }
 

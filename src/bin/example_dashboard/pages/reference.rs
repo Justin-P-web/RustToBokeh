@@ -516,6 +516,9 @@ pub fn page_box_plot_demo() -> Result<Page, ChartError> {
                     .lower("lower")
                     .upper("upper")
                     .y_label("Salary (k USD)")
+                    .palette(PaletteSpec::Named("Set2".into()))
+                    .outlier_source("salary_outliers")
+                    .outlier_value_col("salary_k")
                     .build()?,
             )
             .at(0, 0, 2)

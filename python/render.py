@@ -670,10 +670,17 @@ def build_box_plot(spec, source_cache, view=None):
     lo_vals  = df[lower_col].to_list()
     hi_vals  = df[upper_col].to_list()
 
-    fill_color = spec.get("color", "#4C72B0")
-    alpha      = spec.get("alpha", 0.7)
-    box_hw     = 0.35   # half-width of the box in FactorRange units
-    cap_hw     = 0.15   # half-width of whisker caps
+    # Per-category fill colors — use palette if provided, else single color.
+    palette_spec = spec.get("palette")
+    if palette_spec is not None:
+        colors = _resolve_palette(palette_spec, len(cats))
+    else:
+        single = spec.get("color", "#4C72B0")
+        colors = [single] * len(cats)
+
+    alpha  = spec.get("alpha", 0.7)
+    box_hw = 0.35   # half-width of the box in FactorRange units
+    cap_hw = 0.15   # half-width of whisker caps
 
     # Bokeh (factor, offset) tuples for drawing horizontal segments on a
     # categorical axis: offset is in FactorRange coordinate units.
@@ -691,6 +698,7 @@ def build_box_plot(spec, source_cache, view=None):
         q3_col:        q3_vals,
         lower_col:     lo_vals,
         upper_col:     hi_vals,
+        "_colors":     colors,
         "_median_x0":  median_x0,
         "_median_x1":  median_x1,
         "_cap_lo_x0":  cap_lo_x0,
@@ -752,7 +760,7 @@ def build_box_plot(spec, source_cache, view=None):
     fig.vbar(
         x=cat_col, top=q3_col, bottom=q1_col,
         width=box_hw * 2, source=source,
-        fill_color=fill_color, line_color="black",
+        fill_color="_colors", line_color="black",
         fill_alpha=alpha,
         selection_fill_color="firebrick",
         nonselection_fill_alpha=0.2,
@@ -765,6 +773,30 @@ def build_box_plot(spec, source_cache, view=None):
         y0=q2_col, y1=q2_col,
         source=source, line_color="black", line_width=2.5, **vkw,
     )
+
+    # Outlier scatter points (values outside the whisker fences)
+    outlier_key = spec.get("outlier_source_key")
+    outlier_val_col = spec.get("outlier_value_col")
+    if outlier_key and outlier_val_col and outlier_key in dataframes:
+        odf = dataframes[outlier_key]
+        if len(odf) > 0:
+            # Build a per-outlier color list matched to the category color map
+            cat_to_color = dict(zip(cats, colors))
+            o_cats = odf[cat_col].to_list()
+            o_vals = odf[outlier_val_col].to_list()
+            o_colors = [cat_to_color.get(c, "#4C72B0") for c in o_cats]
+            outlier_source = ColumnDataSource({
+                cat_col:         o_cats,
+                outlier_val_col: o_vals,
+                "_o_colors":     o_colors,
+            })
+            fig.scatter(
+                x=cat_col, y=outlier_val_col,
+                source=outlier_source,
+                size=8, color="_o_colors",
+                line_color="black", line_width=0.8,
+                fill_alpha=0.8,
+            )
 
     fig.yaxis.axis_label = spec.get("y_label", "")
     fig.xgrid.grid_line_color = None

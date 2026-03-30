@@ -250,6 +250,8 @@ pub fn build_salary_raw() -> DataFrame {
             "HR","HR","HR","HR","HR",
             "Operations","Operations","Operations","Operations","Operations",
             "Operations","Operations","Operations","Operations","Operations",
+            // Outliers: one per department to demonstrate scatter rendering
+            "Engineering", "Sales", "Operations",
         ],
         "salary_k" => [
             // Engineering: 72–128k, median ~98k
@@ -270,6 +272,8 @@ pub fn build_salary_raw() -> DataFrame {
             // Operations: 48–78k, median ~60k
             48.0, 52.0, 56.0, 58.0, 60.0,
             62.0, 65.0, 68.0, 72.0, 78.0,
+            // Outlier values: above/below the 1.5×IQR fences
+            165.0, 28.0, 98.0,
         ]
     ]
     .expect("salary_raw")

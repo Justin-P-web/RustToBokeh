@@ -340,6 +340,100 @@ pub fn compute_box_stats(
     ]?)
 }
 
+/// Extract outlier rows from a raw DataFrame for use with box plots.
+///
+/// Returns a new `DataFrame` containing only the rows whose `value_col` value
+/// falls **outside** the Tukey IQR fences (Q1 − 1.5·IQR or Q3 + 1.5·IQR) for
+/// their respective category. The output columns are `category_col` and
+/// `value_col` (with the same names passed in), so the resulting DataFrame can
+/// be registered directly with [`Dashboard::add_df`] and referenced by
+/// [`BoxPlotConfig::outlier_source`](crate::BoxPlotConfig).
+///
+/// # Example
+///
+/// ```ignore
+/// let raw = data::build_salary_raw();
+/// let mut outliers = compute_box_outliers(&raw, "department", "salary_k")?;
+/// dash.add_df("salary_outliers", &mut outliers)?;
+/// ```
+///
+/// # Errors
+///
+/// Returns [`ChartError::Serialization`] if the columns do not exist or the
+/// value column cannot be cast to `f64`.
+pub fn compute_box_outliers(
+    df: &DataFrame,
+    category_col: &str,
+    value_col: &str,
+) -> Result<DataFrame, ChartError> {
+    use polars::prelude::*;
+
+    fn quantile_linear(sorted: &[f64], q: f64) -> f64 {
+        if sorted.len() == 1 {
+            return sorted[0];
+        }
+        let idx = q * (sorted.len() - 1) as f64;
+        let lo = idx.floor() as usize;
+        let hi = idx.ceil() as usize;
+        if lo == hi {
+            sorted[lo]
+        } else {
+            let frac = idx - lo as f64;
+            sorted[lo] * (1.0 - frac) + sorted[hi] * frac
+        }
+    }
+
+    let cat_series = df.column(category_col)?;
+    let val_series = df.column(value_col)?;
+    let val_f64 = val_series.cast(&DataType::Float64)?;
+    let cat_str_ca = cat_series.str()?;
+
+    // Collect unique categories in first-appearance order.
+    let mut seen = std::collections::HashSet::new();
+    let mut unique_cats: Vec<String> = Vec::new();
+    for opt_s in cat_str_ca.iter() {
+        if let Some(s) = opt_s {
+            if seen.insert(s.to_string()) {
+                unique_cats.push(s.to_string());
+            }
+        }
+    }
+
+    let mut out_cats: Vec<String> = Vec::new();
+    let mut out_vals: Vec<f64>    = Vec::new();
+
+    for cat in &unique_cats {
+        let mask = cat_str_ca.equal(cat.as_str());
+        let filtered = val_f64.filter(&mask)?;
+        let filtered_ca = filtered.f64()?;
+        let mut vals: Vec<f64> = filtered_ca.into_no_null_iter().collect();
+
+        if vals.is_empty() {
+            continue;
+        }
+
+        vals.sort_by(|a, b| a.partial_cmp(b).unwrap_or(std::cmp::Ordering::Equal));
+
+        let q1  = quantile_linear(&vals, 0.25);
+        let q3  = quantile_linear(&vals, 0.75);
+        let iqr = q3 - q1;
+        let lo_fence = q1 - 1.5 * iqr;
+        let hi_fence = q3 + 1.5 * iqr;
+
+        for v in vals {
+            if v < lo_fence || v > hi_fence {
+                out_cats.push(cat.clone());
+                out_vals.push(v);
+            }
+        }
+    }
+
+    Ok(df![
+        "category" => out_cats,
+        value_col  => out_vals,
+    ]?)
+}
+
 /// Serialize a Polars `DataFrame` to Arrow IPC bytes.
 ///
 /// This is the format used to pass data across the Rust-Python boundary.

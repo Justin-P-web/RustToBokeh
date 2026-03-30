@@ -288,6 +288,15 @@ fn build_py_chart_config<'py>(
             if let Some(ax) = &c.y_axis {
                 m.set_item("y_axis", build_py_axis_config(py, ax)?)?;
             }
+            if let Some(p) = &c.palette {
+                m.set_item("palette", build_py_palette(py, p)?)?;
+            }
+            if let Some(key) = &c.outlier_source_key {
+                m.set_item("outlier_source_key", key)?;
+            }
+            if let Some(col) = &c.outlier_value_col {
+                m.set_item("outlier_value_col", col)?;
+            }
         }
     }
     Ok(())

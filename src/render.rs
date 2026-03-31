@@ -298,6 +298,26 @@ fn build_py_chart_config<'py>(
                 m.set_item("outlier_value_col", col)?;
             }
         }
+        ChartConfig::Density(c) => {
+            m.set_item("category_col", &c.category_col)?;
+            m.set_item("value_col",    &c.value_col)?;
+            m.set_item("y_label",      &c.y_label)?;
+            if let Some(p) = &c.palette {
+                m.set_item("palette", build_py_palette(py, p)?)?;
+            }
+            if let Some(col) = &c.color {
+                m.set_item("color", col)?;
+            }
+            if let Some(a) = c.alpha {
+                m.set_item("alpha", a)?;
+            }
+            if let Some(ax) = &c.y_axis {
+                m.set_item("y_axis", build_py_axis_config(py, ax)?)?;
+            }
+            if let Some(t) = c.point_threshold {
+                m.set_item("point_threshold", t)?;
+            }
+        }
     }
     Ok(())
 }

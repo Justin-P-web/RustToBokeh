@@ -1,4 +1,5 @@
 pub mod box_plot;
+pub mod density;
 pub mod grouped_bar;
 pub mod hbar;
 pub mod histogram;
@@ -8,6 +9,7 @@ pub mod scatter;
 pub mod spec;
 
 pub use box_plot::{BoxPlotConfig, BoxPlotConfigBuilder};
+pub use density::{DensityConfig, DensityConfigBuilder};
 pub use grouped_bar::{GroupedBarConfig, GroupedBarConfigBuilder};
 pub use hbar::{HBarConfig, HBarConfigBuilder};
 pub use histogram::{HistogramConfig, HistogramConfigBuilder, HistogramDisplay};
@@ -48,6 +50,13 @@ pub enum ChartConfig {
     Histogram(HistogramConfig),
     /// A box-and-whisker plot. See [`BoxPlotConfig`].
     BoxPlot(BoxPlotConfig),
+    /// A density plot (violin or sina). See [`DensityConfig`].
+    ///
+    /// The renderer automatically selects violin (filled KDE polygon) when a
+    /// category has many data points, or sina (KDE-jittered scatter) when it
+    /// has few. The threshold is controlled by
+    /// [`DensityConfig::point_threshold`].
+    Density(DensityConfig),
 }
 
 impl ChartConfig {
@@ -63,6 +72,7 @@ impl ChartConfig {
             ChartConfig::Pie(_) => "pie",
             ChartConfig::Histogram(_) => "histogram",
             ChartConfig::BoxPlot(_) => "box_plot",
+            ChartConfig::Density(_) => "density",
         }
     }
 }

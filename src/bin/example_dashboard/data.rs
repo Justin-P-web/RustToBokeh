@@ -290,3 +290,108 @@ pub fn build_salary_distribution() -> DataFrame {
     ]
     .expect("salary_distribution")
 }
+
+/// Dense performance-score dataset for the violin density demo.
+///
+/// 50 observations per department (5 departments = 250 rows total), with
+/// deliberately varied distribution shapes to produce interesting violins:
+/// - Engineering: near-normal, wide spread (50–100)
+/// - Sales:       right-skewed, many lower scores (40–95)
+/// - Marketing:   bimodal (two clusters at ~55 and ~80)
+/// - Finance:     tight, high-performing (70–95)
+/// - HR:          near-uniform spread (45–90)
+pub fn build_density_scores() -> DataFrame {
+    df![
+        "dept" => [
+            // Engineering — 50 pts, near-normal around 75
+            "Engineering","Engineering","Engineering","Engineering","Engineering",
+            "Engineering","Engineering","Engineering","Engineering","Engineering",
+            "Engineering","Engineering","Engineering","Engineering","Engineering",
+            "Engineering","Engineering","Engineering","Engineering","Engineering",
+            "Engineering","Engineering","Engineering","Engineering","Engineering",
+            "Engineering","Engineering","Engineering","Engineering","Engineering",
+            "Engineering","Engineering","Engineering","Engineering","Engineering",
+            "Engineering","Engineering","Engineering","Engineering","Engineering",
+            "Engineering","Engineering","Engineering","Engineering","Engineering",
+            "Engineering","Engineering","Engineering","Engineering","Engineering",
+            // Sales — 50 pts, right-skewed (many low, few high)
+            "Sales","Sales","Sales","Sales","Sales",
+            "Sales","Sales","Sales","Sales","Sales",
+            "Sales","Sales","Sales","Sales","Sales",
+            "Sales","Sales","Sales","Sales","Sales",
+            "Sales","Sales","Sales","Sales","Sales",
+            "Sales","Sales","Sales","Sales","Sales",
+            "Sales","Sales","Sales","Sales","Sales",
+            "Sales","Sales","Sales","Sales","Sales",
+            "Sales","Sales","Sales","Sales","Sales",
+            "Sales","Sales","Sales","Sales","Sales",
+            // Marketing — 50 pts, bimodal (~55 and ~80)
+            "Marketing","Marketing","Marketing","Marketing","Marketing",
+            "Marketing","Marketing","Marketing","Marketing","Marketing",
+            "Marketing","Marketing","Marketing","Marketing","Marketing",
+            "Marketing","Marketing","Marketing","Marketing","Marketing",
+            "Marketing","Marketing","Marketing","Marketing","Marketing",
+            "Marketing","Marketing","Marketing","Marketing","Marketing",
+            "Marketing","Marketing","Marketing","Marketing","Marketing",
+            "Marketing","Marketing","Marketing","Marketing","Marketing",
+            "Marketing","Marketing","Marketing","Marketing","Marketing",
+            "Marketing","Marketing","Marketing","Marketing","Marketing",
+            // Finance — 50 pts, tight high cluster (70–95)
+            "Finance","Finance","Finance","Finance","Finance",
+            "Finance","Finance","Finance","Finance","Finance",
+            "Finance","Finance","Finance","Finance","Finance",
+            "Finance","Finance","Finance","Finance","Finance",
+            "Finance","Finance","Finance","Finance","Finance",
+            "Finance","Finance","Finance","Finance","Finance",
+            "Finance","Finance","Finance","Finance","Finance",
+            "Finance","Finance","Finance","Finance","Finance",
+            "Finance","Finance","Finance","Finance","Finance",
+            "Finance","Finance","Finance","Finance","Finance",
+            // HR — 50 pts, near-uniform (45–90)
+            "HR","HR","HR","HR","HR",
+            "HR","HR","HR","HR","HR",
+            "HR","HR","HR","HR","HR",
+            "HR","HR","HR","HR","HR",
+            "HR","HR","HR","HR","HR",
+            "HR","HR","HR","HR","HR",
+            "HR","HR","HR","HR","HR",
+            "HR","HR","HR","HR","HR",
+            "HR","HR","HR","HR","HR",
+            "HR","HR","HR","HR","HR",
+        ],
+        "score" => [
+            // Engineering: near-normal around 75, std ~12
+            52.0_f64, 55.0, 57.0, 59.0, 61.0, 63.0, 64.0, 65.0, 66.0, 67.0,
+            68.0, 69.0, 70.0, 71.0, 72.0, 72.0, 73.0, 74.0, 74.0, 75.0,
+            75.0, 76.0, 76.0, 77.0, 77.0, 78.0, 78.0, 79.0, 80.0, 81.0,
+            82.0, 83.0, 84.0, 85.0, 85.0, 86.0, 87.0, 88.0, 89.0, 90.0,
+            91.0, 91.0, 92.0, 93.0, 94.0, 95.0, 96.0, 97.0, 98.0, 100.0,
+            // Sales: right-skewed (mode ~50, long tail to 95)
+            40.0, 42.0, 44.0, 45.0, 46.0, 47.0, 48.0, 48.0, 49.0, 50.0,
+            50.0, 51.0, 51.0, 52.0, 52.0, 53.0, 53.0, 54.0, 55.0, 55.0,
+            56.0, 57.0, 58.0, 59.0, 60.0, 61.0, 62.0, 63.0, 64.0, 65.0,
+            66.0, 67.0, 68.0, 70.0, 71.0, 73.0, 74.0, 76.0, 78.0, 80.0,
+            82.0, 83.0, 85.0, 86.0, 87.0, 89.0, 90.0, 92.0, 93.0, 95.0,
+            // Marketing: bimodal — cluster A around 55, cluster B around 80
+            48.0, 50.0, 51.0, 52.0, 53.0, 54.0, 54.0, 55.0, 55.0, 56.0,
+            56.0, 57.0, 57.0, 58.0, 58.0, 59.0, 60.0, 61.0, 62.0, 63.0,
+            64.0, 65.0, 66.0, 67.0, 68.0,           // valley between modes
+            72.0, 73.0, 74.0, 75.0, 76.0, 77.0, 77.0, 78.0, 78.0, 79.0,
+            79.0, 80.0, 80.0, 81.0, 81.0, 82.0, 82.0, 83.0, 84.0, 85.0,
+            86.0, 87.0, 88.0, 89.0, 90.0,
+            // Finance: tight cluster 70–95
+            70.0, 71.0, 72.0, 73.0, 74.0, 74.0, 75.0, 75.0, 76.0, 76.0,
+            77.0, 77.0, 78.0, 78.0, 79.0, 79.0, 80.0, 80.0, 81.0, 81.0,
+            82.0, 82.0, 82.0, 83.0, 83.0, 83.0, 84.0, 84.0, 85.0, 85.0,
+            85.0, 86.0, 86.0, 87.0, 87.0, 88.0, 88.0, 89.0, 89.0, 90.0,
+            90.0, 90.0, 91.0, 91.0, 92.0, 92.0, 93.0, 93.0, 94.0, 95.0,
+            // HR: near-uniform 45–90
+            45.0, 46.0, 48.0, 49.0, 50.0, 51.0, 52.0, 53.0, 54.0, 55.0,
+            56.0, 57.0, 58.0, 59.0, 60.0, 61.0, 62.0, 63.0, 64.0, 65.0,
+            66.0, 67.0, 68.0, 69.0, 70.0, 71.0, 72.0, 73.0, 74.0, 75.0,
+            76.0, 77.0, 78.0, 79.0, 80.0, 81.0, 82.0, 83.0, 84.0, 85.0,
+            86.0, 87.0, 87.0, 88.0, 88.0, 89.0, 89.0, 90.0, 90.0, 90.0,
+        ]
+    ]
+    .expect("density_scores")
+}

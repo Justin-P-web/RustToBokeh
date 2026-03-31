@@ -15,11 +15,11 @@
 
 pub use crate::charts::{
     AxisConfig, AxisConfigBuilder, BoxPlotConfig, BoxPlotConfigBuilder, ChartConfig, ChartSpec,
-    ChartSpecBuilder, DateStep, FilterConfig, FilterSpec, GridCell, GroupedBarConfig,
-    GroupedBarConfigBuilder, HBarConfig, HBarConfigBuilder, HistogramConfig, HistogramConfigBuilder,
-    HistogramDisplay, LineConfig, LineConfigBuilder, PaletteSpec, PieConfig, PieConfigBuilder,
-    ScatterConfig, ScatterConfigBuilder, TimeScale, TooltipField, TooltipFormat, TooltipSpec,
-    TooltipSpecBuilder, MAX_GRID_COLS,
+    ChartSpecBuilder, DateStep, DensityConfig, DensityConfigBuilder, FilterConfig, FilterSpec,
+    GridCell, GroupedBarConfig, GroupedBarConfigBuilder, HBarConfig, HBarConfigBuilder,
+    HistogramConfig, HistogramConfigBuilder, HistogramDisplay, LineConfig, LineConfigBuilder,
+    PaletteSpec, PieConfig, PieConfigBuilder, ScatterConfig, ScatterConfigBuilder, TimeScale,
+    TooltipField, TooltipFormat, TooltipSpec, TooltipSpecBuilder, MAX_GRID_COLS,
 };
 pub use crate::error::ChartError;
 pub use crate::modules::{

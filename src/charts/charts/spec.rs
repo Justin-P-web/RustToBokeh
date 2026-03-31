@@ -1,5 +1,6 @@
 use super::{ChartConfig, GridCell, ChartSpec};
 use super::box_plot::BoxPlotConfig;
+use super::density::DensityConfig;
 use super::grouped_bar::GroupedBarConfig;
 use super::hbar::HBarConfig;
 use super::histogram::HistogramConfig;
@@ -114,6 +115,20 @@ impl ChartSpecBuilder {
         Self::new(title, key, ChartConfig::BoxPlot(config))
     }
 
+    /// Create a density plot spec (violin or sina, auto-selected).
+    ///
+    /// The DataFrame referenced by `key` should be in long format with one row
+    /// per observation: a categorical column (X grouping) and a numeric column
+    /// (Y values). The renderer automatically chooses **sina** (jittered
+    /// scatter) when each category has few data points, or **violin** (filled
+    /// KDE polygon) when a category is densely populated. The switch-over
+    /// threshold defaults to 30 points and is configurable via
+    /// [`DensityConfig::point_threshold`].
+    #[must_use]
+    pub fn density(title: &str, key: &str, config: DensityConfig) -> Self {
+        Self::new(title, key, ChartConfig::Density(config))
+    }
+
     /// Set the grid position and column span.
     ///
     /// `row` and `col` are zero-based indices into the page grid. `span`
@@ -172,6 +187,7 @@ impl ChartSpecBuilder {
 mod tests {
     use super::*;
     use crate::charts::charts::box_plot::BoxPlotConfig;
+    use crate::charts::charts::density::DensityConfig;
     use crate::charts::charts::grouped_bar::GroupedBarConfig;
     use crate::charts::charts::hbar::HBarConfig;
     use crate::charts::charts::line::LineConfig;
@@ -373,6 +389,35 @@ mod tests {
             .unwrap();
         let spec = ChartSpecBuilder::scatter("Scatter", "src", cfg).build();
         assert_eq!(spec.config.chart_type_str(), "scatter");
+    }
+
+    // ── ChartSpecBuilder::density ─────────────────────────────────────────────
+
+    #[test]
+    fn chart_type_str_density() {
+        let cfg = ChartConfig::Density(
+            DensityConfig::builder()
+                .category("dept")
+                .value("salary_k")
+                .y_label("Salary")
+                .build()
+                .unwrap(),
+        );
+        assert_eq!(cfg.chart_type_str(), "density");
+    }
+
+    #[test]
+    fn chart_spec_builder_density_constructor() {
+        let cfg = DensityConfig::builder()
+            .category("dept")
+            .value("salary_k")
+            .y_label("Salary (k USD)")
+            .build()
+            .unwrap();
+        let spec = ChartSpecBuilder::density("Salary by Dept", "salary_raw", cfg).build();
+        assert_eq!(spec.config.chart_type_str(), "density");
+        assert_eq!(spec.title, "Salary by Dept");
+        assert_eq!(spec.source_key, "salary_raw");
     }
 
     // ── ChartSpecBuilder::dimensions ──────────────────────────────────────────

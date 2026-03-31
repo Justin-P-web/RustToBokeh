@@ -7,11 +7,12 @@
 #   output_dir: str            — output directory path
 
 import io
+import math
 import os
 
+import numpy as np
 import polars as pl
 from bokeh.embed import components
-import math
 
 from bokeh.models import (
     AllIndices,
@@ -805,6 +806,216 @@ def build_box_plot(spec, source_cache, view=None):
     return fig
 
 
+def _gaussian_kde(values, y_grid, bw=None):
+    """Evaluate a Gaussian KDE at each point in y_grid.
+
+    Uses Silverman's rule for bandwidth selection when bw is None.
+    Implemented with numpy only (no scipy required).
+
+    Parameters
+    ----------
+    values : np.ndarray
+        1-D array of observations.
+    y_grid : np.ndarray
+        Points at which to evaluate the density.
+    bw : float or None
+        Kernel bandwidth. When None, Silverman's rule is used.
+
+    Returns
+    -------
+    np.ndarray
+        Density estimates at each y_grid point, same length as y_grid.
+    """
+    n = len(values)
+    if n == 0:
+        return np.zeros(len(y_grid))
+    std = float(np.std(values))
+    if bw is None:
+        bw = (1.06 * std * n ** (-0.2)) if std > 0 else 1.0
+    bw = max(bw, 1e-6)
+    # Shape (grid_points, n_obs); sum Gaussian kernels over all observations.
+    diff = (y_grid[:, None] - values[None, :]) / bw
+    density = np.exp(-0.5 * diff ** 2).sum(axis=1)
+    density /= n * bw * math.sqrt(2 * math.pi)
+    return density
+
+
+def build_density(spec, source_cache, view=None):
+    """Render a density plot — either violin or sina — from raw long-format data.
+
+    Expects a DataFrame in long format: one row per observation, with a
+    categorical column (X grouping) and a numeric value column (Y axis).
+
+    **Mode selection** is automatic based on point density:
+    - **Sina plot** — when the most-populated category has ≤ ``point_threshold``
+      data points (default 30). Each observation is drawn as a scatter marker
+      whose horizontal jitter is proportional to the local KDE density at that
+      y-value, keeping points inside the distribution envelope.
+    - **Violin plot** — when any category exceeds the threshold. A mirrored
+      KDE polygon is rendered per category, with a median line overlaid.
+
+    Both modes use the same color palette and alpha settings.
+    """
+    key      = spec["source_key"]
+    cat_col  = spec["category_col"]
+    val_col  = spec["value_col"]
+    df       = dataframes[key]
+
+    # Preserve insertion order of categories.
+    seen = {}
+    for c in df[cat_col].to_list():
+        seen[c] = None
+    cats = list(seen.keys())
+
+    # Count observations per category.
+    counts = {c: 0 for c in cats}
+    for c in df[cat_col].to_list():
+        counts[c] += 1
+    max_count = max(counts.values()) if counts else 0
+
+    threshold  = spec.get("point_threshold", 30)
+    use_violin = max_count > threshold
+
+    # Resolve colors — one per category.
+    palette_spec = spec.get("palette")
+    if palette_spec is not None:
+        colors = _resolve_palette(palette_spec, len(cats))
+    else:
+        single = spec.get("color", "#4C72B0")
+        colors = [single] * len(cats)
+    cat_color = dict(zip(cats, colors))
+
+    alpha = spec.get("alpha", 0.65)
+
+    kw = _figure_kw(spec, default_height=420)
+    kw["x_range"] = FactorRange(*cats)
+    kw["tools"]   = "pan,wheel_zoom,box_zoom,reset,save"
+
+    mode_label = "violin" if use_violin else "sina"
+    kw["title"] = f"{spec['title']}  [{mode_label}]"
+
+    fig = figure(**kw)
+    fig.xgrid.grid_line_color = None
+    fig.yaxis.axis_label = spec.get("y_label", "")
+
+    # Global y range for the KDE grid (shared across all categories for a
+    # consistent scale on violin polygons).
+    all_vals = np.array(df[val_col].to_list(), dtype=float)
+    y_min = float(all_vals.min())
+    y_max = float(all_vals.max())
+    y_pad = (y_max - y_min) * 0.05 if y_max > y_min else 1.0
+    y_lo  = y_min - y_pad
+    y_hi  = y_max + y_pad
+
+    max_half_width = 0.38   # max half-width in FactorRange offset units
+
+    if use_violin:
+        # ------------------------------------------------------------------
+        # Violin mode: filled KDE polygon per category.
+        # ------------------------------------------------------------------
+        y_grid = np.linspace(y_lo, y_hi, 200)
+
+        # Compute KDE for every category; find global max density for
+        # normalisation so all violins share the same width scale.
+        cat_kde = {}
+        global_max_density = 0.0
+        for cat in cats:
+            mask  = df[cat_col] == cat
+            vals  = np.array(df.filter(mask)[val_col].to_list(), dtype=float)
+            dens  = _gaussian_kde(vals, y_grid)
+            cat_kde[cat] = (vals, dens)
+            local_max = float(dens.max())
+            if local_max > global_max_density:
+                global_max_density = local_max
+
+        if global_max_density == 0.0:
+            global_max_density = 1.0
+
+        for cat in cats:
+            vals, dens = cat_kde[cat]
+            norm = dens / global_max_density * max_half_width
+
+            # Build closed polygon: right side (bottom→top) + left side (top→bottom).
+            xs = [(cat, float(d))  for d in norm] + \
+                 [(cat, float(-d)) for d in reversed(norm)]
+            ys = list(y_grid) + list(reversed(y_grid))
+
+            color = cat_color[cat]
+            fig.patch(
+                xs, ys,
+                fill_color=color,
+                fill_alpha=alpha,
+                line_color=color,
+                line_width=1.2,
+            )
+
+            # Median line — short horizontal segment across the violin waist.
+            median_val = float(np.median(vals))
+            dens_at_med = float(_gaussian_kde(vals, np.array([median_val]))[0])
+            half_w = min(dens_at_med / global_max_density * max_half_width, max_half_width)
+            fig.segment(
+                x0=[(cat, -half_w)],
+                x1=[(cat,  half_w)],
+                y0=[median_val],
+                y1=[median_val],
+                line_color="white",
+                line_width=2.5,
+            )
+
+    else:
+        # ------------------------------------------------------------------
+        # Sina mode: KDE-jittered scatter per category.
+        # ------------------------------------------------------------------
+        # Compute per-category KDE density at each observation's y-value,
+        # then jitter horizontally inside the density envelope.
+
+        # Find global max density for consistent jitter width scaling.
+        global_max_density = 0.0
+        cat_data = {}
+        for cat in cats:
+            mask = df[cat_col] == cat
+            vals = np.array(df.filter(mask)[val_col].to_list(), dtype=float)
+            if len(vals) == 0:
+                cat_data[cat] = (vals, np.array([]))
+                continue
+            dens_at_pts = _gaussian_kde(vals, vals)
+            cat_data[cat] = (vals, dens_at_pts)
+            local_max = float(dens_at_pts.max())
+            if local_max > global_max_density:
+                global_max_density = local_max
+
+        if global_max_density == 0.0:
+            global_max_density = 1.0
+
+        for cat in cats:
+            vals, dens_at_pts = cat_data[cat]
+            if len(vals) == 0:
+                continue
+
+            jitter_widths = (dens_at_pts / global_max_density) * max_half_width
+
+            # Alternate left/right so points spread symmetrically.
+            signs = np.array([1.0 if i % 2 == 0 else -1.0 for i in range(len(vals))])
+            offsets = jitter_widths * signs
+
+            xs = [(cat, float(off)) for off in offsets]
+            ys = vals.tolist()
+
+            color = cat_color[cat]
+            fig.scatter(
+                x=xs,
+                y=ys,
+                size=7,
+                fill_color=color,
+                fill_alpha=alpha,
+                line_color="white",
+                line_width=0.5,
+            )
+
+    _apply_axis_config(spec.get("y_axis"), fig.yaxis[0], fig.y_range, fig.ygrid[0])
+    return fig
+
+
 _BUILDERS = {
     "grouped_bar": build_grouped_bar,
     "line_multi": build_line_multi,
@@ -813,6 +1024,7 @@ _BUILDERS = {
     "pie": build_pie,
     "histogram": build_histogram,
     "box_plot": build_box_plot,
+    "density": build_density,
 }
 
 # ── Non-chart module builders ────────────────────────────────────────────────

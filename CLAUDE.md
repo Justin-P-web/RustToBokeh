@@ -70,7 +70,7 @@ RustToBokeh/
 ├── Cargo.toml               # Rust package manifest
 ├── Cargo.lock               # Pinned dependency versions (do not edit manually)
 ├── requirements.txt         # Pinned Python dependencies (bokeh, jinja2, polars)
-├── output/                  # Generated multi-page HTML output (committed for preview)
+├── output/                  # Generated multi-page HTML output (gitignored)
 ├── vendor/                  # Vendored standalone Python (gitignored, created by setup_vendor.sh)
 ├── README.md                # User-facing setup and usage documentation
 └── LICENSE                  # MIT License
@@ -341,7 +341,6 @@ Integration tests are in `tests/dashboard_output.rs`. They require a Python inte
 - `main` is the stable branch.
 - **Branch creation**: Always create a new branch before making changes. Use the naming convention `claude/<short-description>` (e.g., `claude/add-pie-chart`, `claude/fix-slider-range`). Keep the description concise and lowercase with hyphens. Do not commit directly to `main`.
 - Commits are merged via pull requests.
-- `output/*.html` files are committed intentionally as live preview artifacts.
 
 ---
 

@@ -74,6 +74,13 @@ pub enum ChartError {
     /// - A module's `col + col_span` overflows the grid width
     /// - Two modules in the same row occupy overlapping columns
     GridValidation(String),
+
+    /// Native Rust rendering failed.
+    ///
+    /// Occurs when the native Bokeh renderer encounters a problem such as a
+    /// missing column in a `DataFrame`, an unsupported data type, or an
+    /// unexpected data shape.
+    NativeRender(String),
 }
 
 impl fmt::Display for ChartError {
@@ -84,6 +91,7 @@ impl fmt::Display for ChartError {
             ChartError::Python(e) => write!(f, "Python execution failed: {e}"),
             ChartError::InvalidScript => write!(f, "embedded Python script contains a null byte"),
             ChartError::GridValidation(msg) => write!(f, "grid validation failed: {msg}"),
+            ChartError::NativeRender(msg) => write!(f, "native rendering failed: {msg}"),
         }
     }
 }

@@ -62,6 +62,7 @@
 //! - [`error`] — The [`ChartError`] type used throughout the library.
 //! - [`prelude`] — Convenience re-exports for common usage.
 
+pub mod bokeh_native;
 pub mod charts;
 pub mod error;
 pub mod modules;
@@ -71,6 +72,7 @@ pub mod stats;
 mod python_config;
 mod render;
 
+pub use bokeh_native::BokehResources;
 pub use charts::{
     AxisConfig, AxisConfigBuilder, BoxPlotConfig, BoxPlotConfigBuilder, ChartConfig, ChartSpec,
     ChartSpecBuilder, DateStep, DensityConfig, DensityConfigBuilder, FilterConfig, FilterSpec,
@@ -266,6 +268,35 @@ impl Dashboard {
             &self.output_dir,
             &self.title,
             self.nav_style.as_str(),
+        )
+    }
+
+    /// Render all pages to HTML files using pure Rust — no Python required.
+    ///
+    /// Produces the same output as [`Dashboard::render`] but generates Bokeh's
+    /// JSON document model directly without invoking the Python interpreter.
+    ///
+    /// `resources` controls how Bokeh JS/CSS is delivered:
+    /// - [`BokehResources::Cdn`] — load from cdn.bokeh.org (small files, requires internet)
+    /// - [`BokehResources::Inline`] — embed inline (large files, works offline)
+    ///
+    /// # Errors
+    ///
+    /// Returns [`ChartError::NativeRender`] if any chart fails to build or if
+    /// file I/O fails.
+    pub fn render_native(&self, resources: BokehResources) -> Result<(), ChartError> {
+        let refs: Vec<(&str, Vec<u8>)> = self
+            .frames
+            .iter()
+            .map(|(k, v)| (k.as_str(), v.clone()))
+            .collect();
+        bokeh_native::render_native_dashboard(
+            &refs,
+            &self.pages,
+            &self.output_dir,
+            &self.title,
+            self.nav_style,
+            resources,
         )
     }
 }

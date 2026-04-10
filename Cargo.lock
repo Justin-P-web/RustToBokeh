@@ -2441,7 +2441,10 @@ version = "0.1.0"
 dependencies = [
  "polars",
  "pyo3",
+ "serde",
+ "serde_json",
  "tempfile",
+ "uuid",
 ]
 
 [[package]]

@@ -340,10 +340,11 @@ mod tests {
     #[test]
     fn gaussian_kde_sums_to_approx_one() {
         let vals: Vec<f64> = (0..100).map(|i| i as f64).collect();
-        let grid = linspace(0.0, 100.0, 200);
+        // Grid extends 3× the bandwidth beyond the data range to capture the tails.
+        let grid = linspace(-50.0, 150.0, 400);
         let kde = gaussian_kde(&vals, &grid, None);
         // Trapezoidal integration
-        let step = 100.0 / 199.0;
+        let step = 200.0 / 399.0;
         let integral: f64 = kde.windows(2).map(|w| (w[0] + w[1]) * 0.5 * step).sum();
         assert!((integral - 1.0).abs() < 0.05, "integral={integral}");
     }

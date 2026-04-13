@@ -73,7 +73,7 @@ pub fn build_hbar(
         .attr("left", BokehValue::value_of(BokehValue::Float(0.0)))
         .attr("height", BokehValue::value_of(BokehValue::Float(0.7)))
         .attr("fill_color", BokehValue::value_of(BokehValue::Str(color.to_string())))
-        .attr("fill_alpha", BokehValue::Float(0.1))
+        .attr("fill_alpha", BokehValue::value_of(BokehValue::Float(0.1)))
         .attr("line_color", BokehValue::value_of(BokehValue::Str("white".to_string())));
 
     let renderer = build_glyph_renderer(id_gen, cds_ref, glyph, Some(nonsel), filter_ref);

@@ -250,7 +250,7 @@ fn apply_range_config(
 fn build_x_axis(
     id_gen: &mut IdGen,
     axis_type: &str,
-    range_id: &str,
+    _range_id: &str,
     cfg: Option<&AxisConfig>,
 ) -> (BokehObject, String, BokehObject, String) {
     let (axis_name, ticker_name, formatter_name): (&str, &str, &str) = match axis_type {
@@ -287,7 +287,7 @@ fn build_x_axis(
     }
 
     let grid = BokehObject::new("Grid", grid_id.clone())
-        .attr("axis", BokehValue::ref_of(range_id))
+        .attr("axis", BokehValue::ref_of(&axis_id))
         .attr("dimension", BokehValue::Int(0));
 
     (axis, axis_id, grid, grid_id)

@@ -69,7 +69,9 @@ pub mod modules;
 pub mod pages;
 pub mod prelude;
 pub mod stats;
+#[cfg(feature = "python")]
 mod python_config;
+#[cfg(feature = "python")]
 mod render;
 
 pub use bokeh_native::BokehResources;
@@ -87,8 +89,10 @@ pub use modules::{
     TableSpecBuilder,
 };
 pub use pages::{Page, PageBuilder};
+#[cfg(feature = "python")]
 pub use render::render_dashboard;
 pub use stats::{compute_box_outliers, compute_box_stats, compute_histogram};
+#[cfg(feature = "python")]
 pub use python_config::configure_vendored_python;
 
 /// Navigation bar orientation for the rendered dashboard.
@@ -106,6 +110,7 @@ pub enum NavStyle {
 }
 
 impl NavStyle {
+    #[cfg(feature = "python")]
     fn as_str(self) -> &'static str {
         match self {
             NavStyle::Horizontal => "horizontal",
@@ -251,11 +256,14 @@ impl Dashboard {
     /// page definitions to the embedded `render.py` script, and writes one
     /// HTML file per page.
     ///
+    /// Requires the `python` feature.
+    ///
     /// # Errors
     ///
     /// Returns [`ChartError::Python`] if the Python script raises an
     /// exception, or [`ChartError::InvalidScript`] if the embedded script
     /// is malformed.
+    #[cfg(feature = "python")]
     pub fn render(&self) -> Result<(), ChartError> {
         let refs: Vec<(&str, Vec<u8>)> = self
             .frames
@@ -314,11 +322,13 @@ mod tests {
 
     // ── NavStyle ──────────────────────────────────────────────────────────────
 
+    #[cfg(feature = "python")]
     #[test]
     fn nav_style_horizontal_str() {
         assert_eq!(NavStyle::Horizontal.as_str(), "horizontal");
     }
 
+    #[cfg(feature = "python")]
     #[test]
     fn nav_style_vertical_str() {
         assert_eq!(NavStyle::Vertical.as_str(), "vertical");

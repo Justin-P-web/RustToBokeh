@@ -87,7 +87,7 @@ pub fn page_box_plot_demo() -> Result<Page, ChartError> {
                 "Salary Distribution by Department",
                 "salary_box",
                 BP::builder()
-                    .category("category")
+                    .category("department")
                     .q1("q1")
                     .q2("q2")
                     .q3("q3")

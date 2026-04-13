@@ -82,7 +82,6 @@ pub fn build_pie(
         .attr("selection_policy", BokehObject::new("UnionRenderers", policy_id).into_value())
         .attr("data", BokehValue::Map(cds_data));
 
-    let is_donut = cfg.inner_radius.is_some();
     let inner_r = cfg.inner_radius.unwrap_or(0.0);
     let outer_r = 0.9_f64;
 
@@ -95,33 +94,28 @@ pub fn build_pie(
         let filter = BokehObject::new("IndexFilter", filter_id.clone())
             .attr("indices", BokehValue::Array(vec![BokehValue::Int(i as i64)]));
 
-        let glyph_name = if is_donut { "AnnularWedge" } else { "Wedge" };
         let glyph_id = id_gen.next();
-        let mut glyph = BokehObject::new(glyph_name, glyph_id)
+        let glyph = BokehObject::new("AnnularWedge", glyph_id)
             .attr("x", BokehValue::value_of(BokehValue::Float(0.0)))
             .attr("y", BokehValue::value_of(BokehValue::Float(0.0)))
-            .attr("radius", BokehValue::value_of(BokehValue::Float(outer_r)))
+            .attr("outer_radius", BokehValue::value_of(BokehValue::Float(outer_r)))
+            .attr("inner_radius", BokehValue::value_of(BokehValue::Float(inner_r)))
             .attr("start_angle", BokehValue::field("start_angle"))
             .attr("end_angle", BokehValue::field("end_angle"))
             .attr("fill_color", BokehValue::field("color"))
             .attr("line_color", BokehValue::value_of(BokehValue::Str("white".into())));
-        if is_donut {
-            glyph = glyph.attr("inner_radius", BokehValue::value_of(BokehValue::Float(inner_r)));
-        }
 
         let nonsel_id = id_gen.next();
-        let mut nonsel = BokehObject::new(glyph_name, nonsel_id)
+        let nonsel = BokehObject::new("AnnularWedge", nonsel_id)
             .attr("x", BokehValue::value_of(BokehValue::Float(0.0)))
             .attr("y", BokehValue::value_of(BokehValue::Float(0.0)))
-            .attr("radius", BokehValue::value_of(BokehValue::Float(outer_r)))
+            .attr("outer_radius", BokehValue::value_of(BokehValue::Float(outer_r)))
+            .attr("inner_radius", BokehValue::value_of(BokehValue::Float(inner_r)))
             .attr("start_angle", BokehValue::field("start_angle"))
             .attr("end_angle", BokehValue::field("end_angle"))
             .attr("fill_color", BokehValue::field("color"))
             .attr("fill_alpha", BokehValue::value_of(BokehValue::Float(0.3)))
             .attr("line_color", BokehValue::value_of(BokehValue::Str("white".into())));
-        if is_donut {
-            nonsel = nonsel.attr("inner_radius", BokehValue::value_of(BokehValue::Float(inner_r)));
-        }
 
         // First slice embeds the CDS inline; rest use reference
         let cds_ref = if i == 0 {

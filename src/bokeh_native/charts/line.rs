@@ -1,6 +1,6 @@
 //! Multi-line chart builder.
 
-use polars::prelude::DataFrame;
+use polars::prelude::*;
 
 use crate::charts::charts::line::LineConfig;
 use crate::charts::ChartSpec;
@@ -30,13 +30,37 @@ pub fn build_line(
         .and_then(|a| a.time_scale.as_ref())
         .is_some();
 
+    // Detect categorical (string) x-column
+    let x_col_dtype = df.column(&cfg.x_col)
+        .map(|c| c.dtype().clone())
+        .unwrap_or(DataType::Float64);
+    let is_categorical = matches!(
+        x_col_dtype,
+        DataType::String | DataType::Categorical(_, _) | DataType::Enum(_, _)
+    );
+
     let x_range = if let Some(rt_id) = range_tool_x_range_id {
         XRangeKind::ExistingId(rt_id.to_string())
+    } else if is_categorical {
+        // String x-data needs FactorRange for BokehJS to position points
+        let x_series = df.column(&cfg.x_col).unwrap();
+        let x_cast = x_series.cast(&DataType::String).unwrap();
+        let factors: Vec<BokehValue> = x_cast.str().unwrap()
+            .into_iter()
+            .map(|v| BokehValue::Str(v.unwrap_or("").to_string()))
+            .collect();
+        XRangeKind::Factor(factors)
     } else {
         XRangeKind::DataRange
     };
 
-    let x_axis_type = if is_datetime { "datetime" } else { "linear" };
+    let x_axis_type = if is_datetime {
+        "datetime"
+    } else if is_categorical {
+        "categorical"
+    } else {
+        "linear"
+    };
 
     let mut default_cols: Vec<&str> = vec![cfg.x_col.as_str()];
     default_cols.extend(cfg.y_cols.iter().map(|s| s.as_str()));

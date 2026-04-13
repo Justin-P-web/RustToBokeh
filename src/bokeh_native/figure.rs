@@ -72,8 +72,9 @@ pub fn build_figure(
     let x_scale_id = id_gen.next();
     let y_scale_id = id_gen.next();
     let x_scale_name = if x_axis_type == "categorical" { "CategoricalScale" } else { "LinearScale" };
+    let y_scale_name = if y_axis_type == "categorical" { "CategoricalScale" } else { "LinearScale" };
     let x_scale = BokehObject::new(x_scale_name, x_scale_id.clone());
-    let y_scale = BokehObject::new("LinearScale", y_scale_id.clone());
+    let y_scale = BokehObject::new(y_scale_name, y_scale_id.clone());
 
     // ── Title ────────────────────────────────────────────────────────────────
     let title_id = id_gen.next();

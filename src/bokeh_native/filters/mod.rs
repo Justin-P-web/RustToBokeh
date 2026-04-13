@@ -20,6 +20,9 @@ pub struct FilterOutput {
     pub widget: BokehObject,
     /// ID of the filter model (BooleanFilter, IndexFilter, GroupFilter).
     pub filter_id: String,
+    /// The standalone filter model object — must be added as a document root
+    /// so that cross-root references (from charts to this filter) resolve.
+    pub filter_obj: BokehObject,
     /// Source key this filter applies to.
     pub source_key: String,
     /// Optional label for Switch widgets (displayed alongside the toggle).
@@ -64,28 +67,32 @@ pub fn build_filter_widgets(
     Ok((cds_filters, range_tool_filters))
 }
 
-/// For a set of filter outputs targeting the same source_key, build an
-/// IntersectionFilter (if multiple) or return the single filter ID.
+/// For a set of filter outputs targeting the same source_key, build a
+/// combined filter value using inline objects.
 ///
-/// Returns `(combined_filter_value, extra_objects_to_embed)`.
-/// When `filter_ids` is empty, returns `AllIndices`.
-/// When 1 filter: returns `Ref(filter_id)` (the filter is already embedded inside the widget).
-/// When >1 filters: returns `IntersectionFilter{ operands: [Ref(id1), Ref(id2), ...] }`.
+/// Returns an inline `BokehValue` suitable for a CDSView `filter` attribute.
+/// The filter objects are embedded inline (same ID as in the widget's CustomJS
+/// args) so BokehJS recognises them as the same model instance — no cross-root
+/// references needed.
+///
+/// When `filter_objs` is empty, returns `AllIndices`.
+/// When 1 filter: returns the filter object inline.
+/// When >1 filters: returns `IntersectionFilter{ operands: [...] }`.
 pub fn combine_filters(
     id_gen: &mut IdGen,
-    filter_ids: &[String],
+    filter_objs: &[BokehObject],
 ) -> BokehValue {
-    match filter_ids.len() {
+    match filter_objs.len() {
         0 => {
             let aid = id_gen.next();
             BokehObject::new("AllIndices", aid).into_value()
         }
-        1 => BokehValue::ref_of(&filter_ids[0]),
+        1 => filter_objs[0].clone().into_value(),
         _ => {
             let isect_id = id_gen.next();
-            let operands: Vec<BokehValue> = filter_ids
+            let operands: Vec<BokehValue> = filter_objs
                 .iter()
-                .map(|id| BokehValue::ref_of(id))
+                .map(|obj| obj.clone().into_value())
                 .collect();
             BokehObject::new("IntersectionFilter", isect_id)
                 .attr("operands", BokehValue::Array(operands))
@@ -154,7 +161,7 @@ fn build_range_slider_with_filter(
     let cb_id = id_gen.next();
     let callback = BokehObject::new("CustomJS", cb_id)
         .attr("args", BokehValue::Map(vec![
-            ("bf".into(), bf.into_value()),
+            ("bf".into(), bf.clone().into_value()),
             ("source".into(), BokehValue::Ref(cds_placeholder_id)),
             ("col".into(), BokehValue::Str(filter.column.clone())),
         ]))
@@ -181,6 +188,7 @@ fn build_range_slider_with_filter(
     Ok(FilterOutput {
         widget: slider,
         filter_id: bf_id,
+        filter_obj: bf,
         source_key: filter.source_key.clone(),
         switch_label: None,
         is_range_tool: false,
@@ -208,7 +216,7 @@ fn build_select_filter(
     let cb_id = id_gen.next();
     let callback = BokehObject::new("CustomJS", cb_id)
         .attr("args", BokehValue::Map(vec![
-            ("bf".into(), bf.into_value()),
+            ("bf".into(), bf.clone().into_value()),
             ("source".into(), BokehValue::Ref(cds_placeholder_id)),
             ("col".into(), BokehValue::Str(filter.column.clone())),
         ]))
@@ -237,6 +245,7 @@ fn build_select_filter(
     Ok(FilterOutput {
         widget,
         filter_id: bf_id,
+        filter_obj: bf,
         source_key: filter.source_key.clone(),
         switch_label: None,
         is_range_tool: false,
@@ -262,7 +271,7 @@ fn build_group_filter(
     let cb_id = id_gen.next();
     let callback = BokehObject::new("CustomJS", cb_id)
         .attr("args", BokehValue::Map(vec![
-            ("gf".into(), gf.into_value()),
+            ("gf".into(), gf.clone().into_value()),
             ("source".into(), BokehValue::Ref(cds_placeholder_id)),
         ]))
         .attr("code", BokehValue::Str(
@@ -282,6 +291,7 @@ fn build_group_filter(
     Ok(FilterOutput {
         widget,
         filter_id: gf_id,
+        filter_obj: gf,
         source_key: filter.source_key.clone(),
         switch_label: None,
         is_range_tool: false,
@@ -307,7 +317,7 @@ fn build_threshold_filter(
     let cb_id = id_gen.next();
     let callback = BokehObject::new("CustomJS", cb_id)
         .attr("args", BokehValue::Map(vec![
-            ("bf".into(), bf.into_value()),
+            ("bf".into(), bf.clone().into_value()),
             ("source".into(), BokehValue::Ref(cds_placeholder_id)),
             ("col".into(), BokehValue::Str(filter.column.clone())),
             ("threshold".into(), BokehValue::Float(value)),
@@ -334,6 +344,7 @@ fn build_threshold_filter(
     Ok(FilterOutput {
         widget,
         filter_id: bf_id,
+        filter_obj: bf,
         source_key: filter.source_key.clone(),
         switch_label: Some(filter.label.clone()),
         is_range_tool: false,
@@ -360,7 +371,7 @@ fn build_top_n_filter(
     let cb_id = id_gen.next();
     let callback = BokehObject::new("CustomJS", cb_id)
         .attr("args", BokehValue::Map(vec![
-            ("idx_filter".into(), idx_filter.into_value()),
+            ("idx_filter".into(), idx_filter.clone().into_value()),
             ("source".into(), BokehValue::Ref(cds_placeholder_id)),
             ("col".into(), BokehValue::Str(filter.column.clone())),
             ("descending".into(), BokehValue::Bool(descending)),
@@ -394,6 +405,7 @@ fn build_top_n_filter(
     Ok(FilterOutput {
         widget,
         filter_id: idx_id,
+        filter_obj: idx_filter,
         source_key: filter.source_key.clone(),
         switch_label: None,
         is_range_tool: false,
@@ -419,7 +431,7 @@ fn build_date_range_filter(
     let cb_id = id_gen.next();
     let callback = BokehObject::new("CustomJS", cb_id)
         .attr("args", BokehValue::Map(vec![
-            ("bf".into(), bf.into_value()),
+            ("bf".into(), bf.clone().into_value()),
             ("source".into(), BokehValue::Ref(cds_placeholder_id)),
             ("col".into(), BokehValue::Str(filter.column.clone())),
         ]))
@@ -446,6 +458,7 @@ fn build_date_range_filter(
     Ok(FilterOutput {
         widget,
         filter_id: bf_id,
+        filter_obj: bf,
         source_key: filter.source_key.clone(),
         switch_label: None,
         is_range_tool: false,
@@ -492,7 +505,7 @@ fn build_range_tool(
     let start_cb_id = id_gen.next();
     let start_cb = BokehObject::new("CustomJS", start_cb_id)
         .attr("args", BokehValue::Map(vec![
-            ("bf".into(), bf.into_value()),
+            ("bf".into(), bf.clone().into_value()),
             ("source".into(), BokehValue::Ref(cds_placeholder_id.clone())),
             ("col".into(), BokehValue::Str(filter.column.clone())),
         ]))
@@ -584,6 +597,7 @@ fn build_range_tool(
     Ok(FilterOutput {
         widget: range_widget,
         filter_id: bf_id,
+        filter_obj: bf,
         source_key: filter.source_key.clone(),
         switch_label: None,
         is_range_tool: true,

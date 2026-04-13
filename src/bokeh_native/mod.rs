@@ -88,7 +88,20 @@ pub fn render_native_dashboard(
 
     // Bokeh JS/CSS resource block
     let bokeh_resources_html = match resources {
-        BokehResources::Cdn | BokehResources::Inline => html::bokeh_cdn_resources(),
+        BokehResources::Cdn => html::bokeh_cdn_resources(),
+        BokehResources::Inline => {
+            #[cfg(feature = "bokeh-inline")]
+            { html::bokeh_inline_resources() }
+            #[cfg(not(feature = "bokeh-inline"))]
+            {
+                return Err(ChartError::NativeRender(
+                    "BokehResources::Inline requires the 'bokeh-inline' Cargo feature. \
+                     Run `bash scripts/setup_vendor.sh` then rebuild with \
+                     `cargo build --features bokeh-inline`."
+                        .into(),
+                ));
+            }
+        }
     };
 
     let nav_style_str = match nav_style {
@@ -137,20 +150,20 @@ fn render_page(
         .first()
         .and_then(|o| o.range_tool_range_id.clone());
 
-    // Collect filter IDs per source_key for combine_filters
-    let mut filter_ids_by_source: HashMap<String, Vec<String>> = HashMap::new();
+    // Collect filter objects per source_key for combine_filters
+    let mut filter_objs_by_source: HashMap<String, Vec<BokehObject>> = HashMap::new();
     for fo in &cds_filter_outputs {
-        filter_ids_by_source
+        filter_objs_by_source
             .entry(fo.source_key.clone())
             .or_default()
-            .push(fo.filter_id.clone());
+            .push(fo.filter_obj.clone());
     }
     // Range tool filters also get wired up if charts are `filtered`
     for fo in &range_tool_outputs {
-        filter_ids_by_source
+        filter_objs_by_source
             .entry(fo.source_key.clone())
             .or_default()
-            .push(fo.filter_id.clone());
+            .push(fo.filter_obj.clone());
     }
 
     // ── 2. Build chart figures (don't add to doc yet) ───────────────────────
@@ -158,10 +171,7 @@ fn render_page(
         fig: BokehObject,
         grid: crate::charts::GridCell,
         title: String,
-        // source_key and cds_id tracked only for filter wiring
-        #[allow(dead_code)]
         source_key: String,
-        #[allow(dead_code)]
         cds_id: Option<String>,
     }
 
@@ -172,11 +182,11 @@ fn render_page(
         let PageModule::Chart(spec) = module else { continue };
 
         let filter_ref = if spec.filtered {
-            let ids = filter_ids_by_source
+            let objs = filter_objs_by_source
                 .get(&spec.source_key)
                 .map(|v| v.as_slice())
                 .unwrap_or(&[]);
-            Some(combine_filters(&mut id_gen, ids))
+            Some(combine_filters(&mut id_gen, objs))
         } else {
             None
         };
@@ -225,6 +235,13 @@ fn render_page(
             replace_placeholder_in_obj(&mut fo.widget, &placeholder, real_id);
         }
     }
+
+    // ── 3b. Filter object embedding strategy ──────────────────────────────
+    // Filter objects (BooleanFilter, IndexFilter, GroupFilter) are embedded
+    // inline in BOTH the widget's CustomJS args AND the chart's CDSView
+    // filter attribute (same model ID in both locations). BokehJS
+    // recognises duplicate IDs as the same model instance, so the widget
+    // callback mutates the same filter the chart observes.
 
     // ── 4. Add Range1d widgets (range tool) to doc ──────────────────────────
     for fo in &patched_range_tools {

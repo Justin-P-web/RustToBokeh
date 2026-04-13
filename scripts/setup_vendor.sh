@@ -162,9 +162,71 @@ esac
 
 echo ""
 echo "Wrote .cargo/config.toml with PYO3_PYTHON = ${PYTHON_EXE}"
+
+# ── Copy Bokeh JS/CSS from installed package for offline (inline) rendering ───
+# The Bokeh Python package bundles its own minified JS/CSS. We copy them
+# from the installed site-packages rather than downloading from CDN (which
+# blocks non-browser User-Agents).
+
+BOKEH_VERSION="3.9.0"
+BOKEH_VENDOR_DIR="$PROJECT_DIR/vendor/bokeh"
+
+# Bokeh 3.x bundles CSS inside its JS — only JS files are needed.
+# The package ships them without version numbers; we copy with version suffix
+# to match the paths expected by include_str! in src/bokeh_native/html.rs.
+declare -A BOKEH_COPY_MAP=(
+    ["bokeh.min.js"]="bokeh-${BOKEH_VERSION}.min.js"
+    ["bokeh-widgets.min.js"]="bokeh-widgets-${BOKEH_VERSION}.min.js"
+)
+
+need_copy=false
+for dest_name in "${BOKEH_COPY_MAP[@]}"; do
+    [ -f "$BOKEH_VENDOR_DIR/$dest_name" ] || { need_copy=true; break; }
+done
+
+if ! $need_copy; then
+    echo "vendor/bokeh/ already present — skipping Bokeh asset copy."
+else
+    echo "Locating Bokeh static assets in installed package..."
+
+    BOKEH_STATIC="$("$PYTHON_ABS" -c "
+import bokeh, os
+static = os.path.join(os.path.dirname(bokeh.__file__), 'server', 'static')
+print(static)
+")"
+
+    if [ ! -d "$BOKEH_STATIC" ]; then
+        echo "Error: could not locate Bokeh static directory at '$BOKEH_STATIC'" >&2
+        exit 1
+    fi
+
+    echo "  Bokeh static dir: $BOKEH_STATIC"
+    mkdir -p "$BOKEH_VENDOR_DIR"
+
+    for src_name in "${!BOKEH_COPY_MAP[@]}"; do
+        dest_name="${BOKEH_COPY_MAP[$src_name]}"
+        dest="$BOKEH_VENDOR_DIR/$dest_name"
+        if [ -f "$dest" ]; then
+            echo "  $dest_name already exists — skipping."
+            continue
+        fi
+        src="$BOKEH_STATIC/js/$src_name"
+        if [ ! -f "$src" ]; then
+            echo "Error: expected '$src' not found in Bokeh package." >&2
+            exit 1
+        fi
+        cp "$src" "$dest"
+        echo "  Copied $src_name → $dest_name"
+    done
+    echo "Bokeh assets written to vendor/bokeh/"
+fi
+
 echo ""
 echo "========================================="
 echo "  Setup complete!"
 echo "  Build with:  cargo build --release"
 echo "  Run with:    cargo run --release"
+echo ""
+echo "  For offline HTML (no CDN required):"
+echo "  cargo build --release --features bokeh-inline"
 echo "========================================="

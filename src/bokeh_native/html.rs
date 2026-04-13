@@ -197,24 +197,38 @@ pub fn escape_html(s: &str) -> String {
 /// Bokeh version used for CDN links.
 const BOKEH_VERSION: &str = "3.9.0";
 
-/// Generate CDN `<script>` and `<link>` tags for Bokeh.
+/// Generate CDN `<script>` tags for Bokeh.
+///
+/// Bokeh 3.x bundles its CSS inside the JS files — no separate stylesheet
+/// links are needed.
 pub fn bokeh_cdn_resources() -> String {
     format!(
-        r#"<link rel="stylesheet" href="https://cdn.bokeh.org/bokeh/release/bokeh-{v}.min.css">
-    <link rel="stylesheet" href="https://cdn.bokeh.org/bokeh/release/bokeh-widgets-{v}.min.css">
-    <script src="https://cdn.bokeh.org/bokeh/release/bokeh-{v}.min.js"></script>
+        r#"<script src="https://cdn.bokeh.org/bokeh/release/bokeh-{v}.min.js"></script>
     <script src="https://cdn.bokeh.org/bokeh/release/bokeh-widgets-{v}.min.js"></script>"#,
         v = BOKEH_VERSION,
     )
 }
 
-/// Generate inline `<script>` and `<style>` tags embedding Bokeh JS/CSS.
+/// Generate inline `<script>` tags embedding Bokeh JS.
+///
+/// Bokeh 3.x bundles its CSS inside the JS files — no separate stylesheets
+/// are needed.
+///
+/// The JS assets are read from `vendor/bokeh/` at **compile time** via
+/// `include_str!`. Run `bash scripts/setup_vendor.sh` before building with
+/// this feature enabled.
 #[cfg(feature = "bokeh-inline")]
 pub fn bokeh_inline_resources() -> String {
-    // When the `bokeh-inline` feature is enabled, these constants are populated
-    // by the build script from vendor/bokeh/*.min.js / *.min.css.
-    // Fall back to CDN if the vendor files aren't present.
-    bokeh_cdn_resources()
+    const BOKEH_JS: &str = include_str!(concat!(
+        env!("CARGO_MANIFEST_DIR"),
+        "/vendor/bokeh/bokeh-3.9.0.min.js"
+    ));
+    const BOKEH_WIDGETS_JS: &str = include_str!(concat!(
+        env!("CARGO_MANIFEST_DIR"),
+        "/vendor/bokeh/bokeh-widgets-3.9.0.min.js"
+    ));
+
+    format!("<script>{BOKEH_JS}</script>\n    <script>{BOKEH_WIDGETS_JS}</script>")
 }
 
 // ── Embedded CSS ──────────────────────────────────────────────────────────────

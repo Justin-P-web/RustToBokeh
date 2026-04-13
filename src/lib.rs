@@ -62,15 +62,19 @@
 //! - [`error`] — The [`ChartError`] type used throughout the library.
 //! - [`prelude`] — Convenience re-exports for common usage.
 
+pub mod bokeh_native;
 pub mod charts;
 pub mod error;
 pub mod modules;
 pub mod pages;
 pub mod prelude;
 pub mod stats;
+#[cfg(feature = "python")]
 mod python_config;
+#[cfg(feature = "python")]
 mod render;
 
+pub use bokeh_native::BokehResources;
 pub use charts::{
     AxisConfig, AxisConfigBuilder, BoxPlotConfig, BoxPlotConfigBuilder, ChartConfig, ChartSpec,
     ChartSpecBuilder, DateStep, DensityConfig, DensityConfigBuilder, FilterConfig, FilterSpec,
@@ -85,8 +89,10 @@ pub use modules::{
     TableSpecBuilder,
 };
 pub use pages::{Page, PageBuilder};
+#[cfg(feature = "python")]
 pub use render::render_dashboard;
 pub use stats::{compute_box_outliers, compute_box_stats, compute_histogram};
+#[cfg(feature = "python")]
 pub use python_config::configure_vendored_python;
 
 /// Navigation bar orientation for the rendered dashboard.
@@ -104,6 +110,7 @@ pub enum NavStyle {
 }
 
 impl NavStyle {
+    #[cfg(feature = "python")]
     fn as_str(self) -> &'static str {
         match self {
             NavStyle::Horizontal => "horizontal",
@@ -249,11 +256,14 @@ impl Dashboard {
     /// page definitions to the embedded `render.py` script, and writes one
     /// HTML file per page.
     ///
+    /// Requires the `python` feature.
+    ///
     /// # Errors
     ///
     /// Returns [`ChartError::Python`] if the Python script raises an
     /// exception, or [`ChartError::InvalidScript`] if the embedded script
     /// is malformed.
+    #[cfg(feature = "python")]
     pub fn render(&self) -> Result<(), ChartError> {
         let refs: Vec<(&str, Vec<u8>)> = self
             .frames
@@ -266,6 +276,35 @@ impl Dashboard {
             &self.output_dir,
             &self.title,
             self.nav_style.as_str(),
+        )
+    }
+
+    /// Render all pages to HTML files using pure Rust — no Python required.
+    ///
+    /// Produces the same output as [`Dashboard::render`] but generates Bokeh's
+    /// JSON document model directly without invoking the Python interpreter.
+    ///
+    /// `resources` controls how Bokeh JS/CSS is delivered:
+    /// - [`BokehResources::Cdn`] — load from cdn.bokeh.org (small files, requires internet)
+    /// - [`BokehResources::Inline`] — embed inline (large files, works offline)
+    ///
+    /// # Errors
+    ///
+    /// Returns [`ChartError::NativeRender`] if any chart fails to build or if
+    /// file I/O fails.
+    pub fn render_native(&self, resources: BokehResources) -> Result<(), ChartError> {
+        let refs: Vec<(&str, Vec<u8>)> = self
+            .frames
+            .iter()
+            .map(|(k, v)| (k.as_str(), v.clone()))
+            .collect();
+        bokeh_native::render_native_dashboard(
+            &refs,
+            &self.pages,
+            &self.output_dir,
+            &self.title,
+            self.nav_style,
+            resources,
         )
     }
 }
@@ -283,11 +322,13 @@ mod tests {
 
     // ── NavStyle ──────────────────────────────────────────────────────────────
 
+    #[cfg(feature = "python")]
     #[test]
     fn nav_style_horizontal_str() {
         assert_eq!(NavStyle::Horizontal.as_str(), "horizontal");
     }
 
+    #[cfg(feature = "python")]
     #[test]
     fn nav_style_vertical_str() {
         assert_eq!(NavStyle::Vertical.as_str(), "vertical");

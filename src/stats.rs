@@ -225,12 +225,12 @@ pub fn compute_box_stats(
     }
 
     Ok(df![
-        "category" => out_cats,
-        "q1"       => out_q1,
-        "q2"       => out_q2,
-        "q3"       => out_q3,
-        "lower"    => out_lower,
-        "upper"    => out_upper,
+        category_col => out_cats,
+        "q1"         => out_q1,
+        "q2"         => out_q2,
+        "q3"         => out_q3,
+        "lower"      => out_lower,
+        "upper"      => out_upper,
     ]?)
 }
 
@@ -321,8 +321,8 @@ pub fn compute_box_outliers(
     }
 
     Ok(df![
-        "category" => out_cats,
-        value_col  => out_vals,
+        category_col => out_cats,
+        value_col    => out_vals,
     ]?)
 }
 
@@ -393,7 +393,7 @@ mod tests {
         ].unwrap();
         let result = compute_box_stats(&df, "cat", "val").unwrap();
         let names: Vec<&str> = result.get_column_names().iter().map(|s| s.as_str()).collect();
-        assert!(names.contains(&"category"));
+        assert!(names.contains(&"cat"));
         assert!(names.contains(&"q1"));
         assert!(names.contains(&"q2"));
         assert!(names.contains(&"q3"));
@@ -449,7 +449,7 @@ mod tests {
         ].unwrap();
         let result = compute_box_outliers(&df, "dept", "salary").unwrap();
         let names: Vec<&str> = result.get_column_names().iter().map(|s| s.as_str()).collect();
-        assert!(names.contains(&"category"));
+        assert!(names.contains(&"dept"));
         assert!(names.contains(&"salary"));
     }
 }

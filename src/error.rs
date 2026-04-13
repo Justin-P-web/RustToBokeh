@@ -57,6 +57,8 @@ pub enum ChartError {
     ///
     /// Wraps the underlying [`pyo3::PyErr`]. Common causes include missing
     /// Python packages, data schema mismatches, or bugs in `render.py`.
+    /// Only available with the `python` feature.
+    #[cfg(feature = "python")]
     Python(pyo3::PyErr),
 
     /// The embedded Python script contains a null byte, preventing it from
@@ -64,6 +66,8 @@ pub enum ChartError {
     ///
     /// This should not occur under normal circumstances since the script is
     /// embedded at compile time via `include_str!()`.
+    /// Only available with the `python` feature.
+    #[cfg(feature = "python")]
     InvalidScript,
 
     /// The page grid layout is invalid.
@@ -74,6 +78,13 @@ pub enum ChartError {
     /// - A module's `col + col_span` overflows the grid width
     /// - Two modules in the same row occupy overlapping columns
     GridValidation(String),
+
+    /// Native Rust rendering failed.
+    ///
+    /// Occurs when the native Bokeh renderer encounters a problem such as a
+    /// missing column in a `DataFrame`, an unsupported data type, or an
+    /// unexpected data shape.
+    NativeRender(String),
 }
 
 impl fmt::Display for ChartError {
@@ -81,9 +92,12 @@ impl fmt::Display for ChartError {
         match self {
             ChartError::MissingField(field) => write!(f, "missing required field: {field}"),
             ChartError::Serialization(e) => write!(f, "DataFrame serialization failed: {e}"),
+            #[cfg(feature = "python")]
             ChartError::Python(e) => write!(f, "Python execution failed: {e}"),
+            #[cfg(feature = "python")]
             ChartError::InvalidScript => write!(f, "embedded Python script contains a null byte"),
             ChartError::GridValidation(msg) => write!(f, "grid validation failed: {msg}"),
+            ChartError::NativeRender(msg) => write!(f, "native rendering failed: {msg}"),
         }
     }
 }
@@ -92,6 +106,7 @@ impl std::error::Error for ChartError {
     fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
         match self {
             ChartError::Serialization(e) => Some(e),
+            #[cfg(feature = "python")]
             ChartError::Python(e) => Some(e),
             _ => None,
         }
@@ -104,6 +119,7 @@ impl From<polars::error::PolarsError> for ChartError {
     }
 }
 
+#[cfg(feature = "python")]
 impl From<pyo3::PyErr> for ChartError {
     fn from(e: pyo3::PyErr) -> Self {
         ChartError::Python(e)

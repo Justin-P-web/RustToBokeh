@@ -73,6 +73,10 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     dash.add_page(pages::page_box_plot_demo()?);
     dash.add_page(pages::page_density_demo()?);
 
+    #[cfg(feature = "python")]
     dash.render()?;
+    #[cfg(not(feature = "python"))]
+    dash.render_native(BokehResources::Cdn)?;
+
     Ok(())
 }

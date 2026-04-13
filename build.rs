@@ -1,6 +1,17 @@
 use std::path::{Path, PathBuf};
 
 fn main() {
+    // Re-run if Bokeh vendor assets change (used by the `bokeh-inline` feature).
+    // Emitted unconditionally so Cargo notices updates on all platforms.
+    // Bokeh 3.x bundles CSS inside JS — only JS files are needed.
+    println!("cargo:rerun-if-changed=vendor/bokeh/bokeh-3.9.0.min.js");
+    println!("cargo:rerun-if-changed=vendor/bokeh/bokeh-widgets-3.9.0.min.js");
+
+    // Python DLL copying is only needed when the `python` feature is enabled.
+    if std::env::var("CARGO_FEATURE_PYTHON").is_err() {
+        return;
+    }
+
     if std::env::var("CARGO_CFG_TARGET_OS").unwrap_or_default() != "windows" {
         return;
     }

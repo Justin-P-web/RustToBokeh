@@ -249,13 +249,20 @@ fn render_page(
         doc.add_root_no_div(fo.widget.clone());
     }
 
-    // ── 5. Add filter widgets to doc and collect div UUIDs ──────────────────
-    let mut filter_widget_items: Vec<FilterWidgetItem> = Vec::new();
-    for fo in &patched_cds_filters {
-        let div_uuid = doc.add_root(fo.widget.clone());
-        filter_widget_items.push(FilterWidgetItem {
-            div: format!(r#"<div id="{div_uuid}"></div>"#),
-            label: fo.switch_label.clone(),
+    // ── 5. Add chart figures to doc FIRST so nested CDS models are
+    //      registered before any filter widget Ref to them is decoded.
+    //      (BokehJS decodes roots in order; a Ref to an unknown ID aborts.)
+    let mut grid_items: Vec<GridItem> = Vec::new();
+
+    for info in chart_infos {
+        let div_uuid = doc.add_root(info.fig);
+        grid_items.push(GridItem {
+            grid_row: info.grid.row + 1,  // CSS grid is 1-based
+            grid_col: info.grid.col + 1,
+            grid_col_span: info.grid.col_span,
+            title: info.title,
+            content: format!(r#"<div id="{div_uuid}"></div>"#),
+            is_chart: true,
         });
     }
 
@@ -268,18 +275,13 @@ fn render_page(
         }
     }
 
-    // ── 7. Add chart figures to doc and collect grid items ──────────────────
-    let mut grid_items: Vec<GridItem> = Vec::new();
-
-    for info in chart_infos {
-        let div_uuid = doc.add_root(info.fig);
-        grid_items.push(GridItem {
-            grid_row: info.grid.row + 1,  // CSS grid is 1-based
-            grid_col: info.grid.col + 1,
-            grid_col_span: info.grid.col_span,
-            title: info.title,
-            content: format!(r#"<div id="{div_uuid}"></div>"#),
-            is_chart: true,
+    // ── 7. Add filter widgets to doc and collect div UUIDs ──────────────────
+    let mut filter_widget_items: Vec<FilterWidgetItem> = Vec::new();
+    for fo in &patched_cds_filters {
+        let div_uuid = doc.add_root(fo.widget.clone());
+        filter_widget_items.push(FilterWidgetItem {
+            div: format!(r#"<div id="{div_uuid}"></div>"#),
+            label: fo.switch_label.clone(),
         });
     }
 

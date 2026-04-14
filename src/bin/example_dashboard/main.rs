@@ -76,7 +76,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     #[cfg(feature = "python")]
     dash.render()?;
     #[cfg(not(feature = "python"))]
-    dash.render_native(BokehResources::Cdn)?;
+    dash.render_native(BokehResources::Inline)?;
 
     Ok(())
 }

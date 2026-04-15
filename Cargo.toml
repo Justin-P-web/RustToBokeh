@@ -19,7 +19,7 @@ serde_json = { version = "1", features = ["preserve_order"] }
 uuid = { version = "1", features = ["v4"] }
 
 [features]
-default = ["bokeh-inline"]
+default = []
 bokeh-inline = []
 python = ["dep:pyo3"]
 

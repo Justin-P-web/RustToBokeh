@@ -7,6 +7,19 @@ fn main() {
     println!("cargo:rerun-if-changed=vendor/bokeh/bokeh-3.9.0.min.js");
     println!("cargo:rerun-if-changed=vendor/bokeh/bokeh-widgets-3.9.0.min.js");
 
+    // Declare the custom cfg so Rust doesn't warn about an unexpected key.
+    println!("cargo:rustc-check-cfg=cfg(bokeh_vendor_present)");
+
+    // Emit the cfg only when both vendor JS files are actually present.
+    // html::bokeh_inline_resources() uses include_str! gated on this cfg, so
+    // the build succeeds even when setup_vendor.sh hasn't been run yet.
+    let manifest = PathBuf::from(std::env::var("CARGO_MANIFEST_DIR").unwrap_or_default());
+    let js = manifest.join("vendor/bokeh/bokeh-3.9.0.min.js");
+    let js_widgets = manifest.join("vendor/bokeh/bokeh-widgets-3.9.0.min.js");
+    if js.exists() && js_widgets.exists() {
+        println!("cargo:rustc-cfg=bokeh_vendor_present");
+    }
+
     // Python DLL copying is only needed when the `python` feature is enabled.
     if std::env::var("CARGO_FEATURE_PYTHON").is_err() {
         return;

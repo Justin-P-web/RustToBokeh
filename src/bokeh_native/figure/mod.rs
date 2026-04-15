@@ -93,8 +93,8 @@ pub fn build_figure(
         fig_attrs.push(("sizing_mode", BokehValue::Str("stretch_width".into())));
     }
 
-    fig_attrs.push(("x_range", x_range_obj.into_value()));
-    fig_attrs.push(("y_range", y_range_obj.into_value()));
+    fig_attrs.push(("x_range", x_range_obj));
+    fig_attrs.push(("y_range", y_range_obj));
     fig_attrs.push(("x_scale", x_scale.into_value()));
     fig_attrs.push(("y_scale", y_scale.into_value()));
     fig_attrs.push(("title", title_obj.into_value()));

@@ -4,6 +4,8 @@ type C = ChartSpecBuilder;
 type Line = LineConfig;
 type Scat = ScatterConfig;
 type Para = ParagraphSpec;
+type Tbl = TableSpec;
+type TC = TableColumn;
 
 // Jan 1 2024 00:00:00 UTC in milliseconds
 const JAN_1_2024_MS: f64 = 1_704_067_200_000.0;
@@ -39,6 +41,15 @@ pub fn page_range_tool_demo() -> Result<Page, ChartError> {
         .chart(sensor_line_chart(1, 0, 2)?)
         .chart(temp_humidity_scatter(2, 0, 1, true)?)
         .chart(temp_pressure_scatter(2, 1, 1, true)?)
+        .table(
+            Tbl::new("Sensor Readings", "sensor_events")
+                .column(TC::text("sensor", "Sensor"))
+                .column(TC::number("temperature", "Temp (°C)", 1))
+                .column(TC::number("humidity", "Humidity (%)", 1))
+                .column(TC::number("pressure", "Pressure (hPa)", 1))
+                .at(3, 0, 2)
+                .build(),
+        )
         .filter(FilterSpec::range_tool(
             "sensor_events",
             "timestamp_ms",

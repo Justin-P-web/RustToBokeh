@@ -5,6 +5,7 @@ use std::collections::HashMap;
 
 use polars::prelude::DataFrame;
 
+use crate::charts::{ChartConfig, ChartSpec, FilterConfig};
 use crate::error::ChartError;
 use crate::modules::PageModule;
 use crate::pages::Page;
@@ -37,6 +38,12 @@ pub(super) fn render_page(
     let range_tool_x_range_id: Option<String> = range_tool_outputs
         .first()
         .and_then(|o| o.range_tool_range_id.clone());
+
+    // Column that the RangeTool filters on — only charts whose x_col matches
+    // this should use the shared Range1d as their x_range.
+    let range_tool_x_col: Option<String> = page.filters.iter()
+        .find(|f| matches!(f.config, FilterConfig::RangeTool { .. }))
+        .map(|f| f.column.clone());
 
     let mut filter_objs_by_source: HashMap<String, Vec<BokehObject>> = HashMap::new();
     for fo in &cds_filter_outputs {
@@ -75,12 +82,18 @@ pub(super) fn render_page(
             None
         };
 
+        let effective_rt_range = range_tool_x_range_id.as_deref().filter(|_| {
+            matches!(
+                (range_tool_x_col.as_deref(), chart_x_col(spec)),
+                (Some(rt_col), Some(x_col)) if x_col == rt_col
+            )
+        });
         let fig = build_chart_obj(
             &mut id_gen,
             spec,
             frames,
             filter_ref,
-            range_tool_x_range_id.as_deref(),
+            effective_rt_range,
         )?;
 
         if let Some(cds_id) = extract_first_cds_id(&fig) {
@@ -225,4 +238,14 @@ pub(super) fn render_page(
     };
 
     Ok(render_page_html(&page_data))
+}
+
+/// Extract the x column name from a ChartSpec for chart types that have one.
+/// Used to decide whether a chart should sync its x-axis with the RangeTool Range1d.
+fn chart_x_col(spec: &ChartSpec) -> Option<&str> {
+    match &spec.config {
+        ChartConfig::Line(c)    => Some(&c.x_col),
+        ChartConfig::Scatter(c) => Some(&c.x_col),
+        _                       => None,
+    }
 }

@@ -217,7 +217,11 @@ pub fn bokeh_cdn_resources() -> String {
 /// The JS assets are read from `vendor/bokeh/` at **compile time** via
 /// `include_str!`. Run `bash scripts/setup_vendor.sh` before building with
 /// this feature enabled.
-#[cfg(feature = "bokeh-inline")]
+///
+/// Compiled only when `build.rs` confirms the vendor files are present
+/// (`bokeh_vendor_present` cfg). The call site in `mod.rs` returns a
+/// helpful runtime error when the cfg is absent.
+#[cfg(bokeh_vendor_present)]
 pub fn bokeh_inline_resources() -> String {
     const BOKEH_JS: &str = include_str!(concat!(
         env!("CARGO_MANIFEST_DIR"),

@@ -92,14 +92,13 @@ pub fn render_native_dashboard(
     let bokeh_resources_html = match resources {
         BokehResources::Cdn => html::bokeh_cdn_resources(),
         BokehResources::Inline => {
-            #[cfg(feature = "bokeh-inline")]
+            #[cfg(bokeh_vendor_present)]
             { html::bokeh_inline_resources() }
-            #[cfg(not(feature = "bokeh-inline"))]
+            #[cfg(not(bokeh_vendor_present))]
             {
                 return Err(ChartError::NativeRender(
-                    "BokehResources::Inline requires the 'bokeh-inline' Cargo feature. \
-                     Run `bash scripts/setup_vendor.sh` then rebuild with \
-                     `cargo build --features bokeh-inline`."
+                    "BokehResources::Inline requires vendor Bokeh assets. \
+                     Run `bash scripts/setup_vendor.sh` then recompile."
                         .into(),
                 ));
             }

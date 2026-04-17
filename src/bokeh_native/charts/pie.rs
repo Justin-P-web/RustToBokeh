@@ -12,7 +12,7 @@ use super::super::id_gen::IdGen;
 use super::super::model::{BokehObject, BokehValue};
 use super::super::palette::resolve_palette;
 use super::super::source::{build_cds_from_entries, get_f64_column, get_str_column};
-use super::{add_legend, add_renderers, make_hover_tool};
+use super::{add_legend_panel, add_renderers, make_hover_tool};
 
 pub fn build_pie(
     id_gen: &mut IdGen,
@@ -34,17 +34,21 @@ pub fn build_pie(
         &[cfg.label_col.as_str(), cfg.value_col.as_str()],
     );
 
+    // x_range is wider than y_range so wedges stay circular at a 1.6:1 aspect.
     let FigureOutput { mut figure, .. } = build_figure(
         id_gen,
         &spec.title,
         spec.height.unwrap_or(400),
         spec.width,
-        XRangeKind::Numeric { start: -1.1, end: 1.1 },
-        YRangeKind::Numeric { start: -1.1, end: 1.1 },
+        XRangeKind::Numeric { start: -1.6, end: 1.6 },
+        YRangeKind::Numeric { start: -1.2, end: 1.2 },
         AxisBuilder::x(AxisType::Linear),
         AxisBuilder::y(AxisType::Linear),
         Some(ht),
     );
+    if spec.width.is_none() {
+        figure.attributes.push(("aspect_ratio".to_string(), BokehValue::Float(1.6)));
+    }
 
     let cds = build_cds_from_entries(
         id_gen,
@@ -77,8 +81,9 @@ pub fn build_pie(
         let side = cfg.legend_side.as_deref().unwrap_or("right");
         let legend = BokehObject::new("Legend", id_gen.next())
             .attr("items", BokehValue::Array(legend_items))
-            .attr("location", BokehValue::Str(side.into()));
-        add_legend(&mut figure, legend);
+            .attr("click_policy", BokehValue::Str("hide".into()))
+            .attr("label_text_font_size", BokehValue::Str("10pt".into()));
+        add_legend_panel(&mut figure, legend, side);
     }
 
     hide_axes(&mut figure);
@@ -210,12 +215,14 @@ mod tests {
             .build().unwrap();
         let spec = test_spec("NoLegend");
         let fig = build_pie(&mut id_gen, &spec, &cfg, &df).unwrap();
-        // center should not contain a Legend
-        if let Some(BokehValue::Array(center)) = find_attr_test(&fig, "center") {
-            let has_legend = center.iter().any(|v| {
-                if let BokehValue::Object(o) = v { o.name == "Legend" } else { false }
-            });
-            assert!(!has_legend, "legend should not be present");
+        // neither "right" nor "center" should contain a Legend
+        for panel in &["right", "center"] {
+            if let Some(BokehValue::Array(arr)) = find_attr_test(&fig, panel) {
+                let has_legend = arr.iter().any(|v| {
+                    if let BokehValue::Object(o) = v { o.name == "Legend" } else { false }
+                });
+                assert!(!has_legend, "legend should not be present in {}", panel);
+            }
         }
     }
 
@@ -255,6 +262,38 @@ mod tests {
         let fig = build_pie(&mut id_gen, &spec, &cfg, &df).unwrap();
         let json = serde_json::to_string(&fig).unwrap();
         assert!(json.contains("IndexFilter"));
+    }
+
+    #[test]
+    fn pie_legend_is_in_right_panel_not_center() {
+        let df = test_df();
+        let mut id_gen = IdGen::new();
+        let cfg = PieConfig::builder().label("category").value("amount").build().unwrap();
+        let spec = test_spec("PanelLegend");
+        let fig = build_pie(&mut id_gen, &spec, &cfg, &df).unwrap();
+        // legend must be in "right", not "center"
+        let right_has_legend = find_attr_test(&fig, "right")
+            .and_then(|v| if let BokehValue::Array(a) = v { Some(a) } else { None })
+            .map(|arr| arr.iter().any(|v| matches!(v, BokehValue::Object(o) if o.name == "Legend")))
+            .unwrap_or(false);
+        assert!(right_has_legend, "legend should be in the right panel");
+        let center_has_legend = find_attr_test(&fig, "center")
+            .and_then(|v| if let BokehValue::Array(a) = v { Some(a) } else { None })
+            .map(|arr| arr.iter().any(|v| matches!(v, BokehValue::Object(o) if o.name == "Legend")))
+            .unwrap_or(false);
+        assert!(!center_has_legend, "legend must not be in center");
+    }
+
+    #[test]
+    fn pie_has_aspect_ratio_when_no_explicit_width() {
+        let df = test_df();
+        let mut id_gen = IdGen::new();
+        let cfg = PieConfig::builder().label("category").value("amount").build().unwrap();
+        let spec = test_spec("AspectRatio");
+        let fig = build_pie(&mut id_gen, &spec, &cfg, &df).unwrap();
+        let json = serde_json::to_string(&fig).unwrap();
+        assert!(json.contains("aspect_ratio"), "aspect_ratio should be emitted");
+        assert!(json.contains("1.6"));
     }
 }
 

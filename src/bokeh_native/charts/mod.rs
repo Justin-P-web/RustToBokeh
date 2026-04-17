@@ -209,8 +209,13 @@ pub fn add_renderers(fig: &mut BokehObject, renderers: Vec<BokehObject>) {
 
 /// Add a Legend to the Figure's `center` list.
 pub fn add_legend(fig: &mut BokehObject, legend: BokehObject) {
+    add_legend_panel(fig, legend, "center");
+}
+
+/// Add a Legend to a named outer panel (`"center"`, `"right"`, `"left"`, `"above"`, `"below"`).
+pub fn add_legend_panel(fig: &mut BokehObject, legend: BokehObject, panel: &str) {
     for (key, val) in &mut fig.attributes {
-        if key == "center" {
+        if key == panel {
             if let BokehValue::Array(arr) = val {
                 arr.push(legend.into_value());
                 return;

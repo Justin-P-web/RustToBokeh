@@ -103,6 +103,7 @@ pub fn build_figure(
     fig_attrs.push(("toolbar_location", BokehValue::Str("above".into())));
     fig_attrs.push(("left", BokehValue::Array(vec![y_axis_obj.into_value()])));
     fig_attrs.push(("below", BokehValue::Array(vec![x_axis_obj.into_value()])));
+    fig_attrs.push(("right", BokehValue::Array(vec![])));
     fig_attrs.push((
         "center",
         BokehValue::Array(vec![x_grid_obj.into_value(), y_grid_obj.into_value()]),

@@ -47,6 +47,10 @@ pub(super) fn build_range_tool(
         filter.column
     );
 
+    // Inline the BooleanFilter into the FIRST CustomJS args (start_cb). The
+    // Range1d widget is a doc root decoded before chart figures, so this is
+    // the earliest point at which `bf_id` must be registered for downstream
+    // `Ref` sites (end_cb, chart CDSViews) to resolve.
     let start_cb_id = id_gen.next();
     let start_cb = BokehObject::new("CustomJS", start_cb_id)
         .attr("args", BokehValue::Map(vec![

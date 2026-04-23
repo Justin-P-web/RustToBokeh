@@ -126,6 +126,7 @@ impl Dashboard {
             .iter()
             .map(|(k, v)| (k.as_str(), v.clone()))
             .collect();
+        crate::validator::validate_dashboard(&refs, &self.pages)?;
         crate::render::render_dashboard(
             &refs,
             &self.pages,
@@ -150,6 +151,7 @@ impl Dashboard {
             .iter()
             .map(|(k, v)| (k.as_str(), v.clone()))
             .collect();
+        crate::validator::validate_dashboard(&refs, &self.pages)?;
         bokeh_native::render_native_dashboard(
             &refs,
             &self.pages,

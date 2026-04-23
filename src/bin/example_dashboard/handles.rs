@@ -11,17 +11,13 @@ pub struct Handles {
     pub satisfaction: DfHandle,
     pub website_traffic: DfHandle,
     pub market_share: DfHandle,
-    pub budget_vs_actual: DfHandle,
     pub scatter_performance: DfHandle,
     pub project_status: DfHandle,
     pub cost_breakdown: DfHandle,
     pub quarterly_trends: DfHandle,
-    pub marketing_channels: DfHandle,
     pub sensor_events: DfHandle,
     pub salary_hist: DfHandle,
     pub salary_box: DfHandle,
-    #[allow(dead_code)]
-    pub salary_outliers: DfHandle,
     pub salary_raw: DfHandle,
     pub density_scores: DfHandle,
 }
@@ -35,12 +31,10 @@ pub fn register(dash: &mut Dashboard) -> Result<Handles, ChartError> {
     let satisfaction = dash.add_df("satisfaction", &mut data::build_satisfaction())?;
     let website_traffic = dash.add_df("website_traffic", &mut data::build_website_traffic())?;
     let market_share = dash.add_df("market_share", &mut data::build_market_share())?;
-    let budget_vs_actual = dash.add_df("budget_vs_actual", &mut data::build_budget_vs_actual())?;
     let scatter_performance = dash.add_df("scatter_performance", &mut data::build_scatter_performance())?;
     let project_status = dash.add_df("project_status", &mut data::build_project_status())?;
     let cost_breakdown = dash.add_df("cost_breakdown", &mut data::build_cost_breakdown())?;
     let quarterly_trends = dash.add_df("quarterly_trends", &mut data::build_quarterly_trends())?;
-    let marketing_channels = dash.add_df("marketing_channels", &mut data::build_marketing_channels())?;
     let sensor_events = dash.add_df("sensor_events", &mut data::build_sensor_events())?;
 
     let salary_raw_df = data::build_salary_distribution();
@@ -50,8 +44,6 @@ pub fn register(dash: &mut Dashboard) -> Result<Handles, ChartError> {
     let salary_raw2 = data::build_salary_raw();
     let mut salary_box_df = compute_box_stats(&salary_raw2, "department", "salary_k")?;
     let salary_box = dash.add_df("salary_box", &mut salary_box_df)?;
-    let mut salary_outliers_df = compute_box_outliers(&salary_raw2, "department", "salary_k")?;
-    let salary_outliers = dash.add_df("salary_outliers", &mut salary_outliers_df)?;
 
     let salary_raw = dash.add_df("salary_raw", &mut data::build_salary_raw())?;
     let density_scores = dash.add_df("density_scores", &mut data::build_density_scores())?;
@@ -65,16 +57,13 @@ pub fn register(dash: &mut Dashboard) -> Result<Handles, ChartError> {
         satisfaction,
         website_traffic,
         market_share,
-        budget_vs_actual,
         scatter_performance,
         project_status,
         cost_breakdown,
         quarterly_trends,
-        marketing_channels,
         sensor_events,
         salary_hist,
         salary_box,
-        salary_outliers,
         salary_raw,
         density_scores,
     })

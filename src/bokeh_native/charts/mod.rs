@@ -234,7 +234,7 @@ mod tests {
         scatter::ScatterConfig,
         line::LineConfig,
         hbar::HBarConfig,
-        histogram::{HistogramConfig, HistogramDisplay},
+        histogram::HistogramConfig,
         grouped_bar::GroupedBarConfig,
         pie::PieConfig,
         box_plot::BoxPlotConfig,

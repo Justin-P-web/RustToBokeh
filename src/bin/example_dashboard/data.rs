@@ -105,20 +105,6 @@ pub fn build_market_share() -> DataFrame {
     .expect("market_share")
 }
 
-pub fn build_budget_vs_actual() -> DataFrame {
-    df![
-        "department" => ["Engineering","Engineering","Marketing","Marketing",
-                          "Sales","Sales","Support","Support",
-                          "Finance","Finance","Operations","Operations"],
-        "type" => ["Budget","Actual","Budget","Actual",
-                    "Budget","Actual","Budget","Actual",
-                    "Budget","Actual","Budget","Actual"],
-        "amount" => [500.0,480.0, 200.0,220.0, 300.0,310.0,
-                     150.0,140.0, 100.0,95.0, 250.0,235.0f64]
-    ]
-    .expect("budget_vs_actual")
-}
-
 pub fn build_scatter_performance() -> DataFrame {
     df![
         "revenue"      => [50.0,75.0,120.0,95.0,200.0,180.0,60.0,140.0,310.0,88.0,
@@ -169,20 +155,6 @@ pub fn build_quarterly_trends() -> DataFrame {
         "margin"   => [23.5,25.3,25.0,27.2,29.2,30.2,29.8,32.4f64]
     ]
     .expect("quarterly_trends")
-}
-
-pub fn build_marketing_channels() -> DataFrame {
-    df![
-        "quarter" => ["Q1","Q1","Q1","Q1","Q2","Q2","Q2","Q2",
-                       "Q3","Q3","Q3","Q3","Q4","Q4","Q4","Q4"],
-        "channel" => ["Social","Email","Search","Direct",
-                       "Social","Email","Search","Direct",
-                       "Social","Email","Search","Direct",
-                       "Social","Email","Search","Direct"],
-        "spend" => [45.0,30.0,65.0,20.0, 55.0,35.0,75.0,22.0,
-                    60.0,38.0,80.0,25.0, 70.0,42.0,90.0,28.0f64]
-    ]
-    .expect("marketing_channels")
 }
 
 /// 30 days of sensor readings (Jan 1–30 2024), cycling through three sensors.

@@ -14,12 +14,13 @@
 //! [`ChartError`] for error handling.
 
 pub use crate::charts::{
-    AxisConfig, AxisConfigBuilder, BoxPlotConfig, BoxPlotConfigBuilder, ChartConfig, ChartSpec,
-    ChartSpecBuilder, DateStep, DensityConfig, DensityConfigBuilder, FilterConfig, FilterSpec,
-    GridCell, GroupedBarConfig, GroupedBarConfigBuilder, HBarConfig, HBarConfigBuilder,
-    HistogramConfig, HistogramConfigBuilder, HistogramDisplay, LineConfig, LineConfigBuilder,
-    MarkerType, PaletteSpec, PieConfig, PieConfigBuilder, ScatterConfig, ScatterConfigBuilder,
-    TimeScale, TooltipField, TooltipFormat, TooltipSpec, TooltipSpecBuilder, MAX_GRID_COLS,
+    AxisConfig, AxisConfigBuilder, BoxPlotConfig, BoxPlotConfigBuilder, BubbleConfig,
+    BubbleConfigBuilder, ChartConfig, ChartSpec, ChartSpecBuilder, DateStep, DensityConfig,
+    DensityConfigBuilder, FilterConfig, FilterSpec, GridCell, GroupedBarConfig,
+    GroupedBarConfigBuilder, HBarConfig, HBarConfigBuilder, HistogramConfig,
+    HistogramConfigBuilder, HistogramDisplay, LineConfig, LineConfigBuilder, MarkerType,
+    PaletteSpec, PieConfig, PieConfigBuilder, ScatterConfig, ScatterConfigBuilder, TimeScale,
+    TooltipField, TooltipFormat, TooltipSpec, TooltipSpecBuilder, MAX_GRID_COLS,
 };
 pub use crate::error::ChartError;
 pub use crate::modules::{

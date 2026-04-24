@@ -1,6 +1,7 @@
 //! Chart builders for native Bokeh rendering.
 
 pub mod box_plot;
+pub mod bubble;
 pub mod density;
 pub mod grouped_bar;
 pub mod hbar;
@@ -53,6 +54,7 @@ pub fn build_chart_obj(
         ChartConfig::Scatter(c) => scatter::build_scatter(
             id_gen, spec, c, df, filter_ref, range_tool_x_range_id,
         ),
+        ChartConfig::Bubble(c) => bubble::build_bubble(id_gen, spec, c, df, filter_ref),
         ChartConfig::Histogram(c) => histogram::build_histogram(id_gen, spec, c, df, filter_ref),
         ChartConfig::Line(c) => line::build_line(
             id_gen, spec, c, df, filter_ref, range_tool_x_range_id,

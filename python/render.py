@@ -403,6 +403,110 @@ def build_scatter(spec, source_cache, view=None, x_range=None):
     return fig
 
 
+def build_bubble(spec, source_cache, view=None):
+    """Bubble plot — scatter with data-driven marker size and optional
+    categorical color mapping.
+
+    Raw ``size_col`` values are sqrt-scaled into the ``[size_min, size_max]``
+    pixel range (defaults 8–40). Non-positive or non-finite values clamp to
+    ``size_min``. When ``color_col`` is present, each unique category receives
+    a palette color; otherwise all bubbles share ``color`` (default
+    ``#4C72B0``).
+    """
+    key = spec["source_key"]
+    x_col = spec["x_col"]
+    y_col = spec["y_col"]
+    size_col = spec["size_col"]
+    color_col = spec.get("color_col")
+
+    df = dataframes[key]
+    source = _get_flat_source(key, source_cache)
+    vkw = dict(view=view) if view else {}
+
+    size_min = float(spec.get("size_min", 8.0))
+    size_max = float(spec.get("size_max", 40.0))
+
+    raw = np.array(df[size_col].to_list(), dtype=float)
+    finite = np.isfinite(raw)
+    with np.errstate(invalid="ignore"):
+        pos = finite & (raw > 0)
+    if not np.any(pos):
+        sizes = np.full_like(raw, size_min)
+    else:
+        pos_count = int(np.count_nonzero(pos))
+        valid_count = int(np.count_nonzero(finite))
+        sqrt_vals = np.sqrt(np.where(pos, raw, np.nan))
+        lo = np.nanmin(sqrt_vals)
+        hi = np.nanmax(sqrt_vals)
+        if hi == lo:
+            all_positive_equal = pos_count == valid_count
+            fill = 0.5 * (size_min + size_max) if all_positive_equal else size_max
+            sizes = np.where(pos, fill, size_min)
+        else:
+            t = (sqrt_vals - lo) / (hi - lo)
+            sizes = size_min + t * (size_max - size_min)
+            sizes = np.where(pos, sizes, size_min)
+        sizes = np.where(np.isfinite(sizes), sizes, size_min)
+    source.data["_bubble_size"] = sizes.tolist()
+
+    legend_groups = None
+    default_color = spec.get("color", "#4C72B0")
+    if color_col:
+        groups = df[color_col].unique(maintain_order=True).to_list()
+        palette = _resolve_palette(spec.get("palette"), len(groups))
+        color_map = {g: palette[i] for i, g in enumerate(groups)}
+        source.data["_bubble_color"] = [
+            color_map.get(g, default_color) for g in df[color_col].to_list()
+        ]
+        legend_groups = list(zip(groups, palette))
+    else:
+        source.data["_bubble_color"] = [default_color] * len(df)
+
+    hover = _build_hover_tool(spec)
+    tools = "pan,wheel_zoom,box_zoom,reset,save,box_select,tap"
+    if hover is None:
+        tools = "pan,wheel_zoom,box_zoom,reset,save,hover,box_select,tap"
+
+    ts = _x_axis_time_scale(spec)
+    kw = _figure_kw(spec, x_axis_type="datetime" if ts else None)
+    kw["tools"] = tools
+    fig = figure(**kw)
+    if hover:
+        fig.add_tools(hover)
+
+    renderer = fig.scatter(
+        x=x_col, y=y_col, source=source,
+        size="_bubble_size",
+        fill_color="_bubble_color",
+        line_color="white",
+        fill_alpha=spec.get("alpha", 0.6),
+        marker=spec.get("marker", "circle"),
+        selection_color="firebrick",
+        nonselection_alpha=0.1,
+        **vkw,
+    )
+
+    fig.xaxis.axis_label = spec.get("x_label", "")
+    fig.yaxis.axis_label = spec.get("y_label", "")
+
+    if legend_groups and spec.get("show_legend", True):
+        items = []
+        for label, color in legend_groups:
+            swatch = fig.scatter(
+                x=[float("nan")], y=[float("nan")],
+                size=10, fill_color=color, line_color="white",
+                marker=spec.get("marker", "circle"),
+            )
+            items.append(LegendItem(label=label, renderers=[swatch]))
+        legend = Legend(items=items, location="top_right", click_policy="hide")
+        fig.add_layout(legend)
+    _ = renderer
+
+    _apply_axis_config(spec.get("x_axis"), fig.xaxis[0], fig.x_range, fig.xgrid[0])
+    _apply_axis_config(spec.get("y_axis"), fig.yaxis[0], fig.y_range, fig.ygrid[0])
+    return fig
+
+
 def build_pie(spec, source_cache, view=None):
     """Build a pie or donut chart.
 
@@ -781,9 +885,17 @@ def build_box_plot(spec, source_cache, view=None):
     # Outlier scatter points (values outside the whisker fences)
     outlier_key = spec.get("outlier_source_key")
     outlier_val_col = spec.get("outlier_value_col")
-    if outlier_key and outlier_val_col and outlier_key in dataframes:
+    if outlier_key and outlier_key in dataframes:
         odf = dataframes[outlier_key]
-        if len(odf) > 0:
+        if outlier_val_col is None:
+            # Pick the single non-category numeric column (shape emitted by
+            # compute_box_outliers: category + value only).
+            candidates = [
+                c for c in odf.columns
+                if c != cat_col and odf.schema[c].is_numeric()
+            ]
+            outlier_val_col = candidates[0] if candidates else None
+        if outlier_val_col and len(odf) > 0:
             # Build a per-outlier color list matched to the category color map
             cat_to_color = dict(zip(cats, colors))
             o_cats = odf[cat_col].to_list()
@@ -1043,6 +1155,7 @@ _BUILDERS = {
     "line_multi": build_line_multi,
     "hbar": build_hbar,
     "scatter": build_scatter,
+    "bubble": build_bubble,
     "pie": build_pie,
     "histogram": build_histogram,
     "box_plot": build_box_plot,

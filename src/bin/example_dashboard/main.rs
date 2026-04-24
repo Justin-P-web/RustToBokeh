@@ -30,6 +30,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     dash.add_page(pages::page_histogram_demo(&h)?);
     dash.add_page(pages::page_box_plot_demo(&h)?);
     dash.add_page(pages::page_density_demo(&h)?);
+    dash.add_page(pages::page_bubble_demo(&h)?);
 
     #[cfg(feature = "python")]
     dash.render()?;

@@ -72,12 +72,13 @@ mod render;
 
 pub use bokeh_native::BokehResources;
 pub use charts::{
-    AxisConfig, AxisConfigBuilder, BoxPlotConfig, BoxPlotConfigBuilder, ChartConfig, ChartSpec,
-    ChartSpecBuilder, DateStep, DensityConfig, DensityConfigBuilder, FilterConfig, FilterSpec,
-    GridCell, GroupedBarConfig, GroupedBarConfigBuilder, HBarConfig, HBarConfigBuilder,
-    HistogramConfig, HistogramConfigBuilder, HistogramDisplay, LineConfig, LineConfigBuilder,
-    PaletteSpec, PieConfig, PieConfigBuilder, ScatterConfig, ScatterConfigBuilder, TimeScale,
-    TooltipField, TooltipFormat, TooltipSpec, TooltipSpecBuilder, MAX_GRID_COLS,
+    AxisConfig, AxisConfigBuilder, BoxPlotConfig, BoxPlotConfigBuilder, BubbleConfig,
+    BubbleConfigBuilder, ChartConfig, ChartSpec, ChartSpecBuilder, DateStep, DensityConfig,
+    DensityConfigBuilder, FilterConfig, FilterSpec, GridCell, GroupedBarConfig,
+    GroupedBarConfigBuilder, HBarConfig, HBarConfigBuilder, HistogramConfig,
+    HistogramConfigBuilder, HistogramDisplay, LineConfig, LineConfigBuilder, PaletteSpec,
+    PieConfig, PieConfigBuilder, ScatterConfig, ScatterConfigBuilder, TimeScale, TooltipField,
+    TooltipFormat, TooltipSpec, TooltipSpecBuilder, MAX_GRID_COLS,
 };
 pub use dashboard::Dashboard;
 pub use error::ChartError;

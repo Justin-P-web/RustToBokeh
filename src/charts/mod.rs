@@ -37,6 +37,7 @@ pub mod customization;
 
 pub use charts::{
     BoxPlotConfig, BoxPlotConfigBuilder,
+    BubbleConfig, BubbleConfigBuilder,
     ChartConfig, ChartSpec, ChartSpecBuilder, GridCell, MAX_GRID_COLS,
     DensityConfig, DensityConfigBuilder,
     GroupedBarConfig, GroupedBarConfigBuilder,

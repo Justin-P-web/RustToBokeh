@@ -217,6 +217,14 @@ fn validate_chart(
             require_numeric(&loc, frame, &c.x_col, "x")?;
             require_numeric(&loc, frame, &c.y_col, "y")?;
         }
+        ChartConfig::Bubble(c) => {
+            require_numeric(&loc, frame, &c.x_col, "x")?;
+            require_numeric(&loc, frame, &c.y_col, "y")?;
+            require_numeric(&loc, frame, &c.size_col, "size")?;
+            if let Some(col) = &c.color_col {
+                require_col(&loc, frame, col, "color")?;
+            }
+        }
         ChartConfig::Pie(c) => {
             require_col(&loc, frame, &c.label_col, "label")?;
             require_numeric(&loc, frame, &c.value_col, "value")?;
@@ -245,14 +253,47 @@ fn validate_chart(
                         spec.title, page.slug, outlier_key
                     ))
                 })?;
-                let outlier_col = c.outlier_value_col.as_deref().ok_or_else(|| {
-                    loc.err(
-                        "outlier_source_key set without outlier_value_col — supply the numeric column",
-                    )
-                })?;
+                // category column is reused from the primary frame name
                 require_col_in(
                     outlier_frame,
-                    outlier_col,
+                    &c.category_col,
+                    &format!(
+                        "category column (box plot '{}' on page '{}', outlier source '{}')",
+                        spec.title, page.slug, outlier_key
+                    ),
+                )?;
+
+                // Resolve the outlier value column: explicit override, or the
+                // single non-category numeric column (the shape emitted by
+                // compute_box_outliers).
+                let outlier_col: String = match c.outlier_value_col.as_deref() {
+                    Some(col) => col.to_string(),
+                    None => {
+                        let numeric_non_cat: Vec<&str> = outlier_frame
+                            .cols
+                            .iter()
+                            .filter(|(name, info)| {
+                                name.as_str() != c.category_col && is_numeric(&info.dtype)
+                            })
+                            .map(|(name, _)| name.as_str())
+                            .collect();
+                        match numeric_non_cat.len() {
+                            1 => numeric_non_cat[0].to_string(),
+                            0 => return Err(loc.err(
+                                "outlier source has no numeric value column — \
+                                 set outlier_value_col or use compute_box_outliers",
+                            )),
+                            _ => return Err(loc.err(
+                                "outlier source has multiple numeric columns — \
+                                 set outlier_value_col to disambiguate",
+                            )),
+                        }
+                    }
+                };
+
+                require_col_in(
+                    outlier_frame,
+                    &outlier_col,
                     &format!(
                         "outlier value column (box plot '{}' on page '{}', outlier source '{}')",
                         spec.title, page.slug, outlier_key
@@ -260,18 +301,9 @@ fn validate_chart(
                 )?;
                 require_numeric_in(
                     outlier_frame,
-                    outlier_col,
+                    &outlier_col,
                     &format!(
                         "outlier value column (box plot '{}' on page '{}', outlier source '{}')",
-                        spec.title, page.slug, outlier_key
-                    ),
-                )?;
-                // category column is reused from the primary frame name
-                require_col_in(
-                    outlier_frame,
-                    &c.category_col,
-                    &format!(
-                        "category column (box plot '{}' on page '{}', outlier source '{}')",
                         spec.title, page.slug, outlier_key
                     ),
                 )?;
@@ -419,7 +451,9 @@ fn validate_filter(
                     c.source_key == filter.source_key
                         && matches!(
                             c.config,
-                            ChartConfig::Line(_) | ChartConfig::Scatter(_)
+                            ChartConfig::Line(_)
+                                | ChartConfig::Scatter(_)
+                                | ChartConfig::Bubble(_)
                         )
                 }
                 _ => false,

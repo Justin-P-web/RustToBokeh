@@ -40,6 +40,7 @@ use std::fmt;
 /// | [`Python`](Self::Python) | Python raised an exception during rendering | Check `render.py` logic and Python dependencies |
 /// | [`InvalidScript`](Self::InvalidScript) | Embedded script contains a null byte | Should not occur in normal usage |
 /// | [`GridValidation`](Self::GridValidation) | Page grid layout is invalid | Fix `grid_cols`, column positions, spans, or overlaps |
+/// | [`Validation`](Self::Validation) | Pre-render dashboard validator rejected the build | Fix the referenced column, filter config, or container |
 #[derive(Debug)]
 pub enum ChartError {
     /// A required field was not set on a config builder.
@@ -85,6 +86,20 @@ pub enum ChartError {
     /// missing column in a `DataFrame`, an unsupported data type, or an
     /// unexpected data shape.
     NativeRender(String),
+
+    /// Pre-render dashboard validator rejected the build.
+    ///
+    /// Emitted by [`validator::validate_dashboard`](crate::validator::validate_dashboard)
+    /// before any chart is rendered. Common causes:
+    /// - A `ChartSpec` or `FilterSpec` references a `source_key` that was
+    ///   never registered with `Dashboard::add_df`.
+    /// - A referenced column does not exist in the target `DataFrame`.
+    /// - A referenced column contains nulls (Bokeh renders nulls as `???`).
+    /// - A `FilterConfig` has inconsistent bounds or targets a column of
+    ///   the wrong dtype.
+    /// - Two pages share the same `slug`.
+    /// - A `RangeTool` filter has no matching line/scatter chart on the page.
+    Validation(String),
 }
 
 impl fmt::Display for ChartError {
@@ -98,6 +113,7 @@ impl fmt::Display for ChartError {
             ChartError::InvalidScript => write!(f, "embedded Python script contains a null byte"),
             ChartError::GridValidation(msg) => write!(f, "grid validation failed: {msg}"),
             ChartError::NativeRender(msg) => write!(f, "native rendering failed: {msg}"),
+            ChartError::Validation(msg) => write!(f, "dashboard validation failed: {msg}"),
         }
     }
 }

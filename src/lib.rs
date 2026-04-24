@@ -64,6 +64,7 @@ pub mod modules;
 pub mod pages;
 pub mod prelude;
 pub mod stats;
+pub mod validator;
 #[cfg(feature = "python")]
 mod python_config;
 #[cfg(feature = "python")]
@@ -89,6 +90,7 @@ pub use pages::{Page, PageBuilder};
 #[cfg(feature = "python")]
 pub use render::render_dashboard;
 pub use stats::{compute_box_outliers, compute_box_stats, compute_histogram};
+pub use validator::validate_dashboard;
 #[cfg(feature = "python")]
 pub use python_config::configure_vendored_python;
 

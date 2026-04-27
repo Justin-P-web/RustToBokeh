@@ -164,7 +164,7 @@ fn validate_page(
         match module {
             PageModule::Chart(spec) => validate_chart(page, spec, frames)?,
             PageModule::Table(spec) => validate_table(page, spec, frames)?,
-            PageModule::Paragraph(_) => {}
+            PageModule::Paragraph(_) | PageModule::StatGrid(_) => {}
         }
     }
 

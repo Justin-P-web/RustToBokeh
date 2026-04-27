@@ -15,6 +15,7 @@ struct NavNode {
 struct NavPage {
     slug: String,
     label: String,
+    dot_color: Option<String>,
 }
 
 /// Build the navigation HTML for all pages, highlighting `current_slug`.
@@ -43,6 +44,7 @@ fn build_tree(pages: &[Page], _current_slug: &str) -> NavNode {
         let nav_page = NavPage {
             slug: page.slug.clone(),
             label: page.nav_label.clone(),
+            dot_color: page.dot_color.clone(),
         };
         match &page.category {
             None => root.pages.push(nav_page),
@@ -97,10 +99,11 @@ fn build_horizontal_nav(tree: &NavNode, report_title: &str, current_slug: &str) 
     for page in &tree.pages {
         let active = if page.slug == current_slug { " active" } else { "" };
         html.push_str(&format!(
-            r#"<a href="{slug}.html" class="nav-tab{active}">{label}</a>"#,
+            r#"<a href="{slug}.html" class="nav-tab{active}">{dot}{label}</a>"#,
             slug = page.slug,
             label = escape_html(&page.label),
             active = active,
+            dot = dot_span(&page.dot_color),
         ));
     }
 
@@ -125,10 +128,11 @@ fn build_h_dd_node(node: &NavNode, current_slug: &str) -> String {
     for page in &node.pages {
         let active = if page.slug == current_slug { " active" } else { "" };
         html.push_str(&format!(
-            r#"<a href="{slug}.html" class="nav-dd-item{active}">{label}</a>"#,
+            r#"<a href="{slug}.html" class="nav-dd-item{active}">{dot}{label}</a>"#,
             slug = page.slug,
             label = escape_html(&page.label),
             active = active,
+            dot = dot_span(&page.dot_color),
         ));
     }
 
@@ -156,10 +160,11 @@ fn build_h_dd_sub_node(node: &NavNode, current_slug: &str) -> String {
     for page in &node.pages {
         let active = if page.slug == current_slug { " active" } else { "" };
         html.push_str(&format!(
-            r#"<a href="{slug}.html" class="nav-dd-item{active}">{label}</a>"#,
+            r#"<a href="{slug}.html" class="nav-dd-item{active}">{dot}{label}</a>"#,
             slug = page.slug,
             label = escape_html(&page.label),
             active = active,
+            dot = dot_span(&page.dot_color),
         ));
     }
 
@@ -199,10 +204,11 @@ fn build_vertical_nav(tree: &NavNode, report_title: &str, current_slug: &str, ho
     for page in &tree.pages {
         let active = if page.slug == current_slug { r#" class="active""# } else { "" };
         html.push_str(&format!(
-            r#"<a href="{slug}.html"{active}>{label}</a>"#,
+            r#"<a href="{slug}.html"{active}>{dot}{label}</a>"#,
             slug = page.slug,
             label = escape_html(&page.label),
             active = active,
+            dot = dot_span(&page.dot_color),
         ));
     }
     html.push_str("</div>");
@@ -227,10 +233,11 @@ fn build_v_node(node: &NavNode, current_slug: &str) -> String {
     for page in &node.pages {
         let active = if page.slug == current_slug { r#" class="active""# } else { "" };
         html.push_str(&format!(
-            r#"<a href="{slug}.html"{active}>{label}</a>"#,
+            r#"<a href="{slug}.html"{active}>{dot}{label}</a>"#,
             slug = page.slug,
             label = escape_html(&page.label),
             active = active,
+            dot = dot_span(&page.dot_color),
         ));
     }
 
@@ -243,6 +250,20 @@ fn build_v_node(node: &NavNode, current_slug: &str) -> String {
 }
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
+
+fn dot_span(color: &Option<String>) -> String {
+    match color {
+        Some(c) if !c.is_empty() => format!(
+            r#"<span class="nav-dot" style="background:{}"></span>"#,
+            escape_attr(c),
+        ),
+        _ => String::new(),
+    }
+}
+
+fn escape_attr(s: &str) -> String {
+    s.replace('&', "&amp;").replace('"', "&quot;").replace('<', "&lt;")
+}
 
 fn escape_html(s: &str) -> String {
     s.replace('&', "&amp;")

@@ -24,8 +24,8 @@ pub use crate::charts::{
 };
 pub use crate::error::ChartError;
 pub use crate::modules::{
-    ColumnFormat, PageModule, ParagraphSpec, ParagraphSpecBuilder, TableColumn, TableSpec,
-    TableSpecBuilder,
+    ColumnFormat, PageModule, ParagraphSpec, ParagraphSpecBuilder, StatGridSpec,
+    StatGridSpecBuilder, StatItem, TableColumn, TableSpec, TableSpecBuilder,
 };
 pub use crate::pages::{Page, PageBuilder};
 pub use crate::{

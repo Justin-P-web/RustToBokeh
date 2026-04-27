@@ -37,6 +37,7 @@ fn build_py_nav<'py>(py: Python<'py>, pages: &[Page]) -> PyResult<Bound<'py, PyL
         d.set_item("slug", &page.slug)?;
         d.set_item("label", &page.nav_label)?;
         d.set_item("category", page.category.as_deref().unwrap_or(""))?;
+        d.set_item("dot_color", page.dot_color.as_deref().unwrap_or(""))?;
         py_nav.append(d)?;
     }
     Ok(py_nav)

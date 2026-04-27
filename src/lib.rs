@@ -84,8 +84,8 @@ pub use dashboard::Dashboard;
 pub use error::ChartError;
 pub use handle::DfHandle;
 pub use modules::{
-    ColumnFormat, PageModule, ParagraphSpec, ParagraphSpecBuilder, TableColumn, TableSpec,
-    TableSpecBuilder,
+    ColumnFormat, PageModule, ParagraphSpec, ParagraphSpecBuilder, StatGridSpec,
+    StatGridSpecBuilder, StatItem, TableColumn, TableSpec, TableSpecBuilder,
 };
 pub use pages::{Page, PageBuilder};
 #[cfg(feature = "python")]

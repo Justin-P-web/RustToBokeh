@@ -16,7 +16,7 @@ use super::filters::{build_filter_widgets, combine_filters, FilterOutput};
 use super::html::{render_page_html, FilterWidgetItem, GridItem, PageHtmlData};
 use super::id_gen::IdGen;
 use super::model::BokehObject;
-use super::modules_html::{render_paragraph_html, render_table_html};
+use super::modules_html::{render_paragraph_html, render_stat_grid_html, render_table_html};
 use super::nav::build_nav_html;
 use super::placeholder::{extract_first_cds_id, hoist_inline_cds_with_id, replace_placeholder_in_obj};
 
@@ -250,6 +250,17 @@ pub(super) fn render_page(
                     grid_col: table.grid.col + 1,
                     grid_col_span: table.grid.col_span,
                     title: table.title.clone(),
+                    content,
+                    is_chart: false,
+                });
+            }
+            PageModule::StatGrid(spec) => {
+                let content = render_stat_grid_html(spec);
+                grid_items.push(GridItem {
+                    grid_row: spec.grid.row + 1,
+                    grid_col: spec.grid.col + 1,
+                    grid_col_span: spec.grid.col_span,
+                    title: String::new(),
                     content,
                     is_chart: false,
                 });

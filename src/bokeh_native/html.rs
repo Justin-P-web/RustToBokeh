@@ -101,11 +101,6 @@ pub fn render_page_html(data: &PageHtmlData<'_>) -> String {
 {nav_dropdown_script}
     <div class="page-content">
         <h1>{page_title}</h1>
-        <p class="subtitle">
-            <span class="tech-badge tech-polars">Polars</span>
-            <span class="tech-badge tech-bokeh">Bokeh</span>
-            <span class="tech-badge tech-rust">Rust</span>
-        </p>
 {range_overview_html}{filter_bar_html}        <div class="grid-layout" style="grid-template-columns: repeat({grid_cols}, 1fr);">
 {grid_html}        </div>
 {hidden_divs_html}        <script>{embed_script}</script>
@@ -172,7 +167,7 @@ fn build_range_overviews(overviews: &[String]) -> String {
     let mut html = String::new();
     for div in overviews {
         html.push_str(&format!(
-            "        <div class=\"chart-container\" style=\"margin-bottom:16px\">{div}</div>\n"
+            "        <div class=\"range-overview\">{div}</div>\n"
         ));
     }
     html

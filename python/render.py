@@ -1179,6 +1179,21 @@ def _build_paragraph_html(mod):
     return f'<div class="paragraph-module">{title_html}{paras}</div>'
 
 
+def _build_stat_grid_html(mod):
+    """Render a stat-grid module as label/value/suffix tiles."""
+    tiles = []
+    for item in mod.get("items", []):
+        suffix = item.get("suffix") or ""
+        suffix_html = f'<span class="stat-suffix">{suffix}</span>' if suffix else ""
+        tiles.append(
+            f'<div class="stat-card">'
+            f'<div class="stat-label">{item["label"]}</div>'
+            f'<div class="stat-value">{item["value"]}{suffix_html}</div>'
+            f'</div>'
+        )
+    return f'<div class="stat-grid">{"".join(tiles)}</div>'
+
+
 def _format_cell(val, col):
     """Format a single cell value according to the column's format spec."""
     fmt = col["format"]
@@ -1639,6 +1654,14 @@ for page in pages:
                 "grid": grid,
                 "title": "",
                 "module_type": "table",
+            })
+        elif mtype == "stat_grid":
+            renderables.append({
+                "type": "html",
+                "div": _build_stat_grid_html(mod),
+                "grid": grid,
+                "title": "",
+                "module_type": "stat_grid",
             })
         else:
             raise ValueError(f"Unknown module_type: {mtype!r}")

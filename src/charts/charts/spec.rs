@@ -1,5 +1,6 @@
 use super::{ChartConfig, GridCell, ChartSpec};
 use super::box_plot::BoxPlotConfig;
+use super::bubble::BubbleConfig;
 use super::density::DensityConfig;
 use super::grouped_bar::GroupedBarConfig;
 use super::hbar::HBarConfig;
@@ -111,6 +112,15 @@ impl ChartSpecBuilder {
     #[must_use]
     pub fn scatter(title: &str, source: &DfHandle, config: ScatterConfig) -> Self {
         Self::new(title, source, ChartConfig::Scatter(config))
+    }
+
+    /// Create a bubble plot spec.
+    ///
+    /// A bubble plot is a scatter plot with a data-driven size dimension, and
+    /// optionally a categorical color dimension. See [`BubbleConfig`].
+    #[must_use]
+    pub fn bubble(title: &str, source: &DfHandle, config: BubbleConfig) -> Self {
+        Self::new(title, source, ChartConfig::Bubble(config))
     }
 
     /// Create a pie or donut chart spec.

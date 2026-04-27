@@ -213,7 +213,36 @@ fn build_outlier_renderer(
     cfg: &BoxPlotConfig,
 ) -> Option<BokehObject> {
     let out_cats = get_str_column(outlier_df, &cfg.category_col).ok()?;
-    let out_vals = get_f64_column(outlier_df, cfg.outlier_value_col.as_deref().unwrap_or("value")).ok()?;
+    let value_col = match cfg.outlier_value_col.as_deref() {
+        Some(c) => c.to_string(),
+        None => {
+            // Pick the single non-category numeric column. Matches the shape
+            // emitted by compute_box_outliers (category + value only).
+            let candidates: Vec<String> = outlier_df
+                .columns()
+                .iter()
+                .filter(|c| {
+                    c.name().as_str() != cfg.category_col
+                        && matches!(
+                            c.dtype(),
+                            polars::prelude::DataType::Int8
+                                | polars::prelude::DataType::Int16
+                                | polars::prelude::DataType::Int32
+                                | polars::prelude::DataType::Int64
+                                | polars::prelude::DataType::UInt8
+                                | polars::prelude::DataType::UInt16
+                                | polars::prelude::DataType::UInt32
+                                | polars::prelude::DataType::UInt64
+                                | polars::prelude::DataType::Float32
+                                | polars::prelude::DataType::Float64
+                        )
+                })
+                .map(|c| c.name().to_string())
+                .collect();
+            candidates.into_iter().next()?
+        }
+    };
+    let out_vals = get_f64_column(outlier_df, &value_col).ok()?;
 
     let out_cds = build_cds_from_entries(
         id_gen,

@@ -195,6 +195,46 @@ pub(super) fn build_py_chart_config<'py>(
                 m.set_item("y_axis", build_py_axis_config(py, ax)?)?;
             }
         }
+        ChartConfig::Bubble(c) => {
+            m.set_item("x_col", &c.x_col)?;
+            m.set_item("y_col", &c.y_col)?;
+            m.set_item("size_col", &c.size_col)?;
+            m.set_item("x_label", &c.x_label)?;
+            m.set_item("y_label", &c.y_label)?;
+            if let Some(col) = &c.color_col {
+                m.set_item("color_col", col)?;
+            }
+            if let Some(p) = &c.palette {
+                m.set_item("palette", build_py_palette(py, p)?)?;
+            }
+            if let Some(col) = &c.color {
+                m.set_item("color", col)?;
+            }
+            if let Some(mk) = &c.marker {
+                m.set_item("marker", mk.as_str())?;
+            }
+            if let Some(v) = c.size_min {
+                m.set_item("size_min", v)?;
+            }
+            if let Some(v) = c.size_max {
+                m.set_item("size_max", v)?;
+            }
+            if let Some(a) = c.alpha {
+                m.set_item("alpha", a)?;
+            }
+            if let Some(show) = c.show_legend {
+                m.set_item("show_legend", show)?;
+            }
+            if let Some(tt) = &c.tooltips {
+                m.set_item("tooltips", build_py_tooltip_spec(py, tt)?)?;
+            }
+            if let Some(ax) = &c.x_axis {
+                m.set_item("x_axis", build_py_axis_config(py, ax)?)?;
+            }
+            if let Some(ax) = &c.y_axis {
+                m.set_item("y_axis", build_py_axis_config(py, ax)?)?;
+            }
+        }
         ChartConfig::Pie(c) => {
             m.set_item("label_col", &c.label_col)?;
             m.set_item("value_col", &c.value_col)?;

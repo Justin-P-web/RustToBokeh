@@ -5,6 +5,7 @@ use crate::handles::Handles;
 type C = ChartSpecBuilder;
 type Hist = HistogramConfig;
 type BP = BoxPlotConfig;
+type Bub = BubbleConfig;
 type Para = ParagraphSpec;
 type Pie = PieConfig;
 
@@ -102,6 +103,60 @@ pub fn page_box_plot_demo(h: &Handles) -> Result<Page, ChartError> {
                     .build()?,
             )
             .at(0, 0, 2)
+            .build(),
+        )
+        .build()
+}
+
+pub fn page_bubble_demo(h: &Handles) -> Result<Page, ChartError> {
+    PageBuilder::new("bubble-demo", "Bubble Chart Demo", "Bubble", 2)
+        .category("Reference")
+        .paragraph(
+            Para::new(
+                "Bubble plots add a third numeric dimension to a scatter via marker size, \
+                 and optionally a fourth categorical dimension via fill color. Raw size \
+                 values are sqrt-scaled into a configurable pixel range so perceived area \
+                 tracks the underlying magnitude. The chart on the left uses a single fill \
+                 color; the chart on the right colors bubbles by tier.",
+            )
+            .title("Bubble Plot")
+            .at(0, 0, 2)
+            .build(),
+        )
+        .chart(
+            C::bubble(
+                "Revenue vs Profit (size = employees)",
+                &h.scatter_performance,
+                Bub::builder()
+                    .x("revenue")
+                    .y("profit")
+                    .size("employees")
+                    .x_label("Revenue (k USD)")
+                    .y_label("Profit (k USD)")
+                    .size_range(8.0, 42.0)
+                    .alpha(0.55)
+                    .build()?,
+            )
+            .at(1, 0, 1)
+            .build(),
+        )
+        .chart(
+            C::bubble(
+                "Revenue vs Profit by Tier",
+                &h.scatter_performance,
+                Bub::builder()
+                    .x("revenue")
+                    .y("profit")
+                    .size("employees")
+                    .color_by("tier")
+                    .x_label("Revenue (k USD)")
+                    .y_label("Profit (k USD)")
+                    .palette(PaletteSpec::Named("Category10".into()))
+                    .size_range(8.0, 42.0)
+                    .alpha(0.6)
+                    .build()?,
+            )
+            .at(1, 1, 1)
             .build(),
         )
         .build()

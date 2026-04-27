@@ -1,4 +1,5 @@
 pub mod box_plot;
+pub mod bubble;
 pub mod density;
 pub mod grouped_bar;
 pub mod hbar;
@@ -9,6 +10,7 @@ pub mod scatter;
 pub mod spec;
 
 pub use box_plot::{BoxPlotConfig, BoxPlotConfigBuilder};
+pub use bubble::{BubbleConfig, BubbleConfigBuilder};
 pub use density::{DensityConfig, DensityConfigBuilder};
 pub use grouped_bar::{GroupedBarConfig, GroupedBarConfigBuilder};
 pub use hbar::{HBarConfig, HBarConfigBuilder};
@@ -44,6 +46,8 @@ pub enum ChartConfig {
     HBar(HBarConfig),
     /// A scatter plot. See [`ScatterConfig`].
     Scatter(ScatterConfig),
+    /// A bubble plot (scatter with a data-driven size dimension). See [`BubbleConfig`].
+    Bubble(BubbleConfig),
     /// A pie or donut chart. See [`PieConfig`].
     Pie(PieConfig),
     /// A histogram. See [`HistogramConfig`].
@@ -69,6 +73,7 @@ impl ChartConfig {
             ChartConfig::Line(_) => "line_multi",
             ChartConfig::HBar(_) => "hbar",
             ChartConfig::Scatter(_) => "scatter",
+            ChartConfig::Bubble(_) => "bubble",
             ChartConfig::Pie(_) => "pie",
             ChartConfig::Histogram(_) => "histogram",
             ChartConfig::BoxPlot(_) => "box_plot",

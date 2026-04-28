@@ -3,6 +3,7 @@
 //! Mirrors the Python `build_nav_tree()` logic and the Jinja2 nav macros
 //! from `templates/chart.html`, but generates HTML directly in Rust.
 
+use crate::bokeh_native::html_css_scripts::THEME_SWITCHER_HTML;
 use crate::pages::Page;
 
 /// A node in the navigation tree (a category or the root).
@@ -112,7 +113,9 @@ fn build_horizontal_nav(tree: &NavNode, report_title: &str, current_slug: &str) 
         html.push_str(&build_h_dd_node(child, current_slug));
     }
 
-    html.push_str("</div></div></nav>");
+    html.push_str("</div>");
+    html.push_str(THEME_SWITCHER_HTML);
+    html.push_str("</div></nav>");
     html
 }
 
@@ -217,6 +220,7 @@ fn build_vertical_nav(tree: &NavNode, report_title: &str, current_slug: &str, ho
         html.push_str(&build_v_node(child, current_slug));
     }
 
+    html.push_str(THEME_SWITCHER_HTML);
     html.push_str("</nav>");
     html
 }

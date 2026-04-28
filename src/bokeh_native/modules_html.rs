@@ -2,9 +2,30 @@
 
 use polars::prelude::DataFrame;
 
-use crate::modules::{ColumnFormat, ParagraphSpec, TableSpec};
+use crate::modules::{ColumnFormat, ParagraphSpec, StatGridSpec, TableSpec};
 
 use super::html;
+
+pub(super) fn render_stat_grid_html(spec: &StatGridSpec) -> String {
+    let mut html = String::from(r#"<div class="stat-grid">"#);
+    for item in &spec.items {
+        let suffix = match &item.suffix {
+            Some(s) if !s.is_empty() => format!(
+                r#"<span class="stat-suffix">{}</span>"#,
+                html::escape_html(s)
+            ),
+            _ => String::new(),
+        };
+        html.push_str(&format!(
+            r#"<div class="stat-card"><div class="stat-label">{label}</div><div class="stat-value">{value}{suffix}</div></div>"#,
+            label = html::escape_html(&item.label),
+            value = html::escape_html(&item.value),
+            suffix = suffix,
+        ));
+    }
+    html.push_str("</div>");
+    html
+}
 
 pub(super) fn render_paragraph_html(para: &ParagraphSpec) -> String {
     let mut html = String::from(r#"<div class="paragraph-module">"#);

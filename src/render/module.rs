@@ -50,6 +50,22 @@ pub(super) fn build_py_module<'py>(py: Python<'py>, module: &PageModule) -> PyRe
             }
             m.set_item("columns", py_cols)?;
         }
+        PageModule::StatGrid(spec) => {
+            m.set_item("module_type", "stat_grid")?;
+            m.set_item("title", "")?;
+            m.set_item("grid_row", spec.grid.row)?;
+            m.set_item("grid_col", spec.grid.col)?;
+            m.set_item("grid_col_span", spec.grid.col_span)?;
+            let py_items = PyList::empty(py);
+            for item in &spec.items {
+                let i = PyDict::new(py);
+                i.set_item("label", &item.label)?;
+                i.set_item("value", &item.value)?;
+                i.set_item("suffix", item.suffix.as_deref().unwrap_or(""))?;
+                py_items.append(i)?;
+            }
+            m.set_item("items", py_items)?;
+        }
     }
     Ok(m)
 }

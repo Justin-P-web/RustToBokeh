@@ -8,7 +8,7 @@
 
 use crate::charts::{ChartSpec, FilterSpec, MAX_GRID_COLS};
 use crate::error::ChartError;
-use crate::modules::{PageModule, ParagraphSpec, TableSpec};
+use crate::modules::{PageModule, ParagraphSpec, StatGridSpec, TableSpec};
 
 // ── Page ─────────────────────────────────────────────────────────────────────
 
@@ -41,6 +41,10 @@ pub struct Page {
     /// heading in the navigation bar (horizontal) or sidebar (vertical).
     /// Pages with `None` are shown ungrouped.
     pub category: Option<String>,
+    /// Optional CSS color string (e.g. `"#d04040"`, `"oklch(60% 0.18 28)"`)
+    /// rendered as a small dot next to this page's nav entry. Used to
+    /// color-code per-test or per-event pages in the sidebar.
+    pub dot_color: Option<String>,
 }
 
 // ── Page builder ─────────────────────────────────────────────────────────────
@@ -75,6 +79,7 @@ pub struct PageBuilder {
     modules: Vec<PageModule>,
     filters: Vec<FilterSpec>,
     category: Option<String>,
+    dot_color: Option<String>,
 }
 
 impl PageBuilder {
@@ -99,7 +104,18 @@ impl PageBuilder {
             modules: Vec::new(),
             filters: Vec::new(),
             category: None,
+            dot_color: None,
         }
+    }
+
+    /// Set a color dot rendered next to this page's nav-sidebar entry.
+    ///
+    /// Accepts any CSS color string (`"#d04040"`, `"oklch(60% 0.18 28)"`,
+    /// `"rebeccapurple"`). Used to color-code per-test pages.
+    #[must_use]
+    pub fn dot_color(mut self, css_color: &str) -> Self {
+        self.dot_color = Some(css_color.into());
+        self
     }
 
     /// Assign this page to a navigation category group.
@@ -136,9 +152,18 @@ impl PageBuilder {
     /// The spec is wrapped in [`PageModule::Table`](crate::modules::PageModule::Table).
     /// The table's `source_key` must reference a `DataFrame` registered with
     /// [`Dashboard::add_df`](crate::Dashboard::add_df).
-    #[must_use] 
+    #[must_use]
     pub fn table(mut self, spec: TableSpec) -> Self {
         self.modules.push(PageModule::Table(spec));
+        self
+    }
+
+    /// Add a row of compact stat tiles to this page (general-info header).
+    ///
+    /// Wraps the spec in [`PageModule::StatGrid`](crate::modules::PageModule::StatGrid).
+    #[must_use]
+    pub fn stat_grid(mut self, spec: StatGridSpec) -> Self {
+        self.modules.push(PageModule::StatGrid(spec));
         self
     }
 
@@ -185,6 +210,7 @@ impl PageBuilder {
                 PageModule::Chart(s) => (s.grid.row, s.grid.col, s.grid.col_span),
                 PageModule::Paragraph(s) => (s.grid.row, s.grid.col, s.grid.col_span),
                 PageModule::Table(s) => (s.grid.row, s.grid.col, s.grid.col_span),
+                PageModule::StatGrid(s) => (s.grid.row, s.grid.col, s.grid.col_span),
             };
 
             if span == 0 {
@@ -233,6 +259,7 @@ impl PageBuilder {
             modules: self.modules,
             filters: self.filters,
             category: self.category,
+            dot_color: self.dot_color,
         })
     }
 }

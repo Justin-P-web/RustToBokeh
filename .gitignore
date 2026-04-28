@@ -36,4 +36,5 @@ __pycache__/
 
 # Generated HTML output
 output/
+output_sensor/
 output.html

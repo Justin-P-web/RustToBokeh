@@ -3,6 +3,7 @@
 //! Mirrors the Python `build_nav_tree()` logic and the Jinja2 nav macros
 //! from `templates/chart.html`, but generates HTML directly in Rust.
 
+use crate::bokeh_native::html_css_scripts::THEME_SWITCHER_HTML;
 use crate::pages::Page;
 
 /// A node in the navigation tree (a category or the root).
@@ -15,6 +16,7 @@ struct NavNode {
 struct NavPage {
     slug: String,
     label: String,
+    dot_color: Option<String>,
 }
 
 /// Build the navigation HTML for all pages, highlighting `current_slug`.
@@ -43,6 +45,7 @@ fn build_tree(pages: &[Page], _current_slug: &str) -> NavNode {
         let nav_page = NavPage {
             slug: page.slug.clone(),
             label: page.nav_label.clone(),
+            dot_color: page.dot_color.clone(),
         };
         match &page.category {
             None => root.pages.push(nav_page),
@@ -97,10 +100,11 @@ fn build_horizontal_nav(tree: &NavNode, report_title: &str, current_slug: &str) 
     for page in &tree.pages {
         let active = if page.slug == current_slug { " active" } else { "" };
         html.push_str(&format!(
-            r#"<a href="{slug}.html" class="nav-tab{active}">{label}</a>"#,
+            r#"<a href="{slug}.html" class="nav-tab{active}">{dot}{label}</a>"#,
             slug = page.slug,
             label = escape_html(&page.label),
             active = active,
+            dot = dot_span(&page.dot_color),
         ));
     }
 
@@ -110,7 +114,7 @@ fn build_horizontal_nav(tree: &NavNode, report_title: &str, current_slug: &str) 
     }
 
     html.push_str("</div>");
-    html.push_str(&build_theme_switcher_html());
+    html.push_str(THEME_SWITCHER_HTML);
     html.push_str("</div></nav>");
     html
 }
@@ -127,10 +131,11 @@ fn build_h_dd_node(node: &NavNode, current_slug: &str) -> String {
     for page in &node.pages {
         let active = if page.slug == current_slug { " active" } else { "" };
         html.push_str(&format!(
-            r#"<a href="{slug}.html" class="nav-dd-item{active}">{label}</a>"#,
+            r#"<a href="{slug}.html" class="nav-dd-item{active}">{dot}{label}</a>"#,
             slug = page.slug,
             label = escape_html(&page.label),
             active = active,
+            dot = dot_span(&page.dot_color),
         ));
     }
 
@@ -158,10 +163,11 @@ fn build_h_dd_sub_node(node: &NavNode, current_slug: &str) -> String {
     for page in &node.pages {
         let active = if page.slug == current_slug { " active" } else { "" };
         html.push_str(&format!(
-            r#"<a href="{slug}.html" class="nav-dd-item{active}">{label}</a>"#,
+            r#"<a href="{slug}.html" class="nav-dd-item{active}">{dot}{label}</a>"#,
             slug = page.slug,
             label = escape_html(&page.label),
             active = active,
+            dot = dot_span(&page.dot_color),
         ));
     }
 
@@ -201,10 +207,11 @@ fn build_vertical_nav(tree: &NavNode, report_title: &str, current_slug: &str, ho
     for page in &tree.pages {
         let active = if page.slug == current_slug { r#" class="active""# } else { "" };
         html.push_str(&format!(
-            r#"<a href="{slug}.html"{active}>{label}</a>"#,
+            r#"<a href="{slug}.html"{active}>{dot}{label}</a>"#,
             slug = page.slug,
             label = escape_html(&page.label),
             active = active,
+            dot = dot_span(&page.dot_color),
         ));
     }
     html.push_str("</div>");
@@ -213,7 +220,7 @@ fn build_vertical_nav(tree: &NavNode, report_title: &str, current_slug: &str, ho
         html.push_str(&build_v_node(child, current_slug));
     }
 
-    html.push_str(&build_theme_switcher_html());
+    html.push_str(THEME_SWITCHER_HTML);
     html.push_str("</nav>");
     html
 }
@@ -230,10 +237,11 @@ fn build_v_node(node: &NavNode, current_slug: &str) -> String {
     for page in &node.pages {
         let active = if page.slug == current_slug { r#" class="active""# } else { "" };
         html.push_str(&format!(
-            r#"<a href="{slug}.html"{active}>{label}</a>"#,
+            r#"<a href="{slug}.html"{active}>{dot}{label}</a>"#,
             slug = page.slug,
             label = escape_html(&page.label),
             active = active,
+            dot = dot_span(&page.dot_color),
         ));
     }
 
@@ -245,15 +253,21 @@ fn build_v_node(node: &NavNode, current_slug: &str) -> String {
     html
 }
 
-// ── Theme switcher ────────────────────────────────────────────────────────────
+// ── Helpers ───────────────────────────────────────────────────────────────────
 
-fn build_theme_switcher_html() -> String {
-    String::from(
-        r##"<div class="theme-switcher"><button class="theme-switcher-trigger" id="theme-switcher-trigger" aria-label="Change theme" aria-haspopup="menu"><span class="theme-switcher-trigger-swatch" aria-hidden="true"></span><span>Theme</span><span class="caret" aria-hidden="true">▾</span></button><div class="theme-switcher-menu" id="theme-switcher-menu" role="menu"><button class="theme-option" data-theme="default" role="menuitem"><span class="theme-option-swatch" aria-hidden="true"></span>Classic</button><button class="theme-option" data-theme="graphite" role="menuitem"><span class="theme-option-swatch" aria-hidden="true"></span>Graphite</button><button class="theme-option" data-theme="forest" role="menuitem"><span class="theme-option-swatch" aria-hidden="true"></span>Forest</button><button class="theme-option" data-theme="oxide" role="menuitem"><span class="theme-option-swatch" aria-hidden="true"></span>Oxide</button><button class="theme-option" data-theme="lab" role="menuitem"><span class="theme-option-swatch" aria-hidden="true"></span>Lab</button></div></div>"##,
-    )
+fn dot_span(color: &Option<String>) -> String {
+    match color {
+        Some(c) if !c.is_empty() => format!(
+            r#"<span class="nav-dot" style="background:{}"></span>"#,
+            escape_attr(c),
+        ),
+        _ => String::new(),
+    }
 }
 
-// ── Helpers ───────────────────────────────────────────────────────────────────
+fn escape_attr(s: &str) -> String {
+    s.replace('&', "&amp;").replace('"', "&quot;").replace('<', "&lt;")
+}
 
 fn escape_html(s: &str) -> String {
     s.replace('&', "&amp;")

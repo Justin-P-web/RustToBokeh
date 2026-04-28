@@ -11,6 +11,10 @@ path = "src/lib.rs"
 name = "example-dashboard"
 path = "src/bin/example_dashboard/main.rs"
 
+[[bin]]
+name = "sensor-report"
+path = "src/bin/sensor_report/main.rs"
+
 [dependencies]
 pyo3 = { version = "0.23", features = ["auto-initialize"], optional = true }
 polars = { version = "0.53", features = ["lazy", "ipc", "parquet"] }

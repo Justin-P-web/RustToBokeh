@@ -33,6 +33,8 @@ pub enum PageModule {
     Paragraph(ParagraphSpec),
     /// A formatted data table rendered from a registered `DataFrame`.
     Table(TableSpec),
+    /// A row of compact label / value / suffix tiles for summary metrics.
+    StatGrid(StatGridSpec),
 }
 
 // ── ParagraphSpec ─────────────────────────────────────────────────────────────
@@ -323,6 +325,81 @@ impl TableSpecBuilder {
             columns: self.columns,
             grid: self.grid,
         }
+    }
+}
+
+// ── StatGridSpec ──────────────────────────────────────────────────────────────
+
+/// One tile in a [`StatGridSpec`] — label above a large value, optional suffix.
+pub struct StatItem {
+    /// Small uppercase mono label (e.g. `"DURATION"`, `"PEAK Δ"`).
+    pub label: String,
+    /// Pre-formatted value string (e.g. `"72"`, `"+4.2"`, `"OK"`).
+    pub value: String,
+    /// Optional unit / suffix shown after the value (e.g. `"h"`, `"°C"`).
+    pub suffix: Option<String>,
+}
+
+impl StatItem {
+    /// Convenience constructor.
+    #[must_use]
+    pub fn new(label: &str, value: &str) -> Self {
+        Self { label: label.into(), value: value.into(), suffix: None }
+    }
+    /// Set the suffix (units / qualifier displayed after the value).
+    #[must_use]
+    pub fn suffix(mut self, suffix: &str) -> Self {
+        self.suffix = Some(suffix.into());
+        self
+    }
+}
+
+/// A horizontal row of compact stat tiles. Use for general-info headers
+/// (duration, peak deviation, sample count, etc.) above per-test plots.
+pub struct StatGridSpec {
+    /// Tiles, rendered left-to-right in insertion order.
+    pub items: Vec<StatItem>,
+    /// Position in the page grid.
+    pub grid: GridCell,
+}
+
+/// Fluent builder for [`StatGridSpec`]. Create with [`StatGridSpec::new`].
+pub struct StatGridSpecBuilder {
+    items: Vec<StatItem>,
+    grid: GridCell,
+}
+
+impl StatGridSpec {
+    /// Create a builder for an empty stat grid.
+    #[must_use]
+    #[allow(clippy::new_ret_no_self)]
+    pub fn new() -> StatGridSpecBuilder {
+        StatGridSpecBuilder {
+            items: Vec::new(),
+            grid: GridCell { row: 0, col: 0, col_span: 1 },
+        }
+    }
+}
+
+impl StatGridSpecBuilder {
+    /// Append a stat tile.
+    #[must_use]
+    pub fn item(mut self, item: StatItem) -> Self {
+        self.items.push(item);
+        self
+    }
+
+    /// Set grid position and column span. `row`/`col` zero-based.
+    #[must_use]
+    pub fn at(mut self, row: usize, col: usize, span: usize) -> Self {
+        self.grid = GridCell { row, col, col_span: span };
+        self
+    }
+
+    /// Consume the builder and produce a [`StatGridSpec`].
+    #[must_use]
+    pub fn build(self) -> StatGridSpec {
+        StatGridSpec { items: self.items, grid: self.grid }
     }
 }
 

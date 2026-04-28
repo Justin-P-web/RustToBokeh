@@ -2,6 +2,8 @@
 
 A Rust library for building interactive multi-page [Bokeh](https://bokeh.org/) dashboards. Data processing happens in Rust with [Polars](https://pola.rs/) DataFrames, then [PyO3](https://pyo3.rs/) bridges into Python where Bokeh renders the charts and [Jinja2](https://jinja.palletsprojects.com/) produces self-contained HTML files.
 
+The output is styled as a flat **lab-instrument report**: dark sidebar navigation with section labels and color-coded page dots, light/dark adaptive theme via OKLCH and `light-dark()`, humanist body type paired with a tabular-numeric mono face, and a single steel-blue accent. The intended primary use case is summarising a series of fixed-duration tests (each test becomes a page with its own time-window selector, general-info stat header, and per-test plots) plus cross-test rollup summary pages.
+
 ## How It Works
 
 ```
@@ -132,6 +134,12 @@ cargo run --bin example-dashboard --release
 
 On success, HTML files are written to the `output/` directory in the current working directory — one file per dashboard page. Open any of them in a browser to explore the interactive charts and navigate between pages.
 
+A second demo, `sensor-report`, mirrors the primary use case: a multi-test sensor report with per-sensor cross-test rollup pages plus per-test pages with a time-window selector at the top, a general-info stat header, and per-test plots. It renders to `output_sensor/`:
+
+```bash
+cargo run --bin sensor-report --release
+```
+
 To run the unit tests (no Python required):
 
 ```bash
@@ -235,6 +243,15 @@ PageBuilder::new("timeseries", "Sensor Time Series", "Sensors", 2)
 ```
 
 Pages without a category are shown ungrouped at the top of the navigation.
+
+**Sidebar dot indicators** — pass any CSS color string to `.dot_color()` to render a small color swatch next to a page's nav entry. Useful for color-coding per-test or per-event pages so they read at a glance from the sidebar.
+
+```rust
+PageBuilder::new("test-overtemp", "Overtemp Test", "Overtemp", 2)
+    .category("Tests")
+    .dot_color("oklch(60% 0.18 28)")
+    // ...
+```
 
 ### Supported Chart Types
 
@@ -401,9 +418,9 @@ Multiple filters on the same `source_key` combine automatically via Bokeh's `Int
 
 **Range tool note:** unlike the other filters, `RangeTool` does not hide rows via `CDSView`. It synchronises the visible x-axis window across charts sharing the same `source_key`. Charts do **not** need `.filtered()` to participate.
 
-### Content Modules: Paragraphs and Tables
+### Content Modules: Paragraphs, Tables, Stat Grids
 
-Pages can mix charts with styled text blocks and data tables.
+Pages can mix charts with styled text blocks, data tables, and compact stat tile rows.
 
 **Paragraph:**
 
@@ -449,6 +466,26 @@ PageBuilder::new("data-table", "Data Table", "Table", 2)
 | `TableColumn::currency(key, label, symbol, decimals)` | `"$1,234.50"` |
 | `TableColumn::percent(key, label, decimals)` | `"28.5%"` |
 
+**Stat grid** — a row of label / value / suffix tiles. Use as a general-info header above plots (e.g. duration, sample count, peak deviation for a per-test page).
+
+```rust
+PageBuilder::new("test-overtemp", "Overtemp Test", "Overtemp", 2)
+    .stat_grid(
+        StatGridSpec::new()
+            .item(StatItem::new("DURATION", "72").suffix("h"))
+            .item(StatItem::new("SAMPLES", "72"))
+            .item(StatItem::new("ANOMALY", "28–38h"))
+            .item(StatItem::new("AFFECTED", "Temperature"))
+            .item(StatItem::new("PEAK Δ", "+13.20").suffix("°C"))
+            .at(0, 0, 2)
+            .build(),
+    )
+    .chart(/* ... */)
+    .build()?
+```
+
+Tiles auto-fit into the row; values are rendered with tabular numerics so columns line up cleanly.
+
 ### Error Handling
 
 All fallible operations return `Result<T, ChartError>`. The error type covers:
@@ -478,8 +515,8 @@ RustToBokeh/
 │   │   └── module.rs         # PyO3 serialisation for PageModule + ColumnFormat + FilterConfig
 │   ├── error.rs              # ChartError enum
 │   ├── prelude.rs            # Convenience re-exports
-│   ├── pages.rs              # Page and PageBuilder
-│   ├── modules.rs            # ParagraphSpec, TableSpec, TableColumn
+│   ├── pages.rs              # Page and PageBuilder (incl. dot_color)
+│   ├── modules.rs            # ParagraphSpec, TableSpec, TableColumn, StatGridSpec, StatItem
 │   ├── charts/               # Chart types and visual customisation
 │   │   ├── mod.rs            # Re-exports all chart types
 │   │   ├── charts/           # Per-chart config structs and builders
@@ -531,20 +568,22 @@ RustToBokeh/
 │   │       ├── mod.rs, grouped_bar.rs, line.rs, hbar.rs, scatter.rs,
 │   │       ├── pie.rs, histogram.rs, box_plot.rs, density.rs
 │   └── bin/
-│       └── example_dashboard/
-│           ├── main.rs       # Dashboard setup (register data, add pages, render)
-│           ├── data.rs       # DataFrame builders for demo data
-│           └── pages/        # 28-page demo, split by category
-│               ├── executive.rs
-│               ├── financial.rs
-│               ├── commercial.rs
-│               ├── digital.rs
-│               ├── people.rs
-│               ├── operations.rs
-│               └── reference/
-│                   ├── showcase.rs    # Module showcase, chart customisation
-│                   ├── time_series.rs # RangeTool and DateRange demos
-│                   └── statistical.rs # Pie, histogram, box plot, density demos
+│       ├── example_dashboard/  # Chart-type gallery (output/)
+│       │   ├── main.rs       # Dashboard setup (register data, add pages, render)
+│       │   ├── data.rs       # DataFrame builders for demo data
+│       │   └── pages/        # 28-page demo, split by category
+│       │       ├── executive.rs, commercial.rs, operations.rs, people.rs
+│       │       └── reference/
+│       │           ├── showcase.rs     # Module showcase, chart customisation
+│       │           ├── time_series.rs  # RangeTool and DateRange demos
+│       │           └── statistical.rs  # Pie, histogram, box plot, density demos
+│       └── sensor_report/      # Multi-test sensor report (output_sensor/)
+│           ├── main.rs         # Registers per-test + per-sensor frames, builds pages
+│           ├── data.rs         # Per-test sensor data generator + summary helpers
+│           ├── handles.rs      # Frame registration and DfHandle bundle
+│           └── pages/
+│               ├── summary.rs  # Per-sensor cross-test rollup page
+│               └── test.rs     # Per-test window page (time selector + StatGrid + plots)
 ├── python/
 │   └── render.py             # Python renderer (embedded at compile time)
 ├── templates/

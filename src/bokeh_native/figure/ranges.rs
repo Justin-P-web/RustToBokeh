@@ -47,7 +47,10 @@ pub(super) fn build_x_range(
         }
         XRangeKind::DataRange => {
             let id = id_gen.next();
-            let obj = BokehObject::new("DataRange1d", id.clone());
+            let mut obj = BokehObject::new("DataRange1d", id.clone());
+            if let Some(cfg) = cfg {
+                obj = apply_range_config(obj, cfg);
+            }
             (obj.into_value(), id)
         }
     }

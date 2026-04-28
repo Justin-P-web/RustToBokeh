@@ -638,12 +638,35 @@ def build_range_tool_overview(rt_spec, source_cache, shared_x_range):
         "toolbar_location": None,
         "sizing_mode": "stretch_width",
     }
+    # Bound overview x_range to data extent + 5% buffer so navigator can't
+    # be panned/zoomed past data either.
+    vals = source.data[x_col]
+    finite = [v for v in vals if v is not None and v == v and v not in (float("inf"), float("-inf"))]
+    if finite:
+        lo, hi = min(finite), max(finite)
+        span = hi - lo
+        buffer = span * 0.05 if span > 0 else 1.0
+        b_lo, b_hi = lo - buffer, hi + buffer
+    else:
+        b_lo, b_hi = None, None
+
     if time_scale:
         kw["x_axis_type"] = "datetime"
-        vals = source.data[x_col]
-        kw["x_range"] = Range1d(start=min(vals), end=max(vals))
+        if finite:
+            kw["x_range"] = Range1d(start=lo, end=hi, bounds=(b_lo, b_hi))
+        else:
+            kw["x_range"] = Range1d(start=min(vals), end=max(vals))
     else:
         kw["x_range"] = list(source.data[x_col])
+
+    # Bound y to data extent + 5% buffer.
+    y_vals = source.data[y_col]
+    y_finite = [v for v in y_vals if v is not None and v == v and v not in (float("inf"), float("-inf"))]
+    if y_finite:
+        y_lo, y_hi = min(y_finite), max(y_finite)
+        y_span = y_hi - y_lo
+        y_buf = y_span * 0.05 if y_span > 0 else 1.0
+        kw["y_range"] = Range1d(start=y_lo - y_buf, end=y_hi + y_buf, bounds=(y_lo - y_buf, y_hi + y_buf))
 
     fig = figure(**kw)
     fig.line(x=x_col, y=y_col, source=source, color=_PALETTE[0], line_width=1)
@@ -1538,10 +1561,23 @@ for page in pages:
     cds_filters = [f for f in page_filters if f["kind"] != "range_tool"]
 
     # Build one shared Range1d per source_key that has a RangeTool spec.
+    # bounds = data range + 5% buffer so panning/zoom can't escape the data.
     range_tool_x_ranges = {}
     for rt in range_tool_specs:
         sk = rt["source_key"]
-        range_tool_x_ranges[sk] = Range1d(start=rt["start"], end=rt["end"])
+        src = source_cache.get(sk) or _get_flat_source(sk, source_cache)
+        col_data = src.data.get(rt["column"], [])
+        finite = [v for v in col_data if v is not None and v == v and v not in (float("inf"), float("-inf"))]
+        if finite:
+            lo, hi = min(finite), max(finite)
+            span = hi - lo
+            buffer = span * 0.05 if span > 0 else 1.0
+            b_lo, b_hi = lo - buffer, hi + buffer
+            start = max(rt["start"], b_lo)
+            end = min(rt["end"], b_hi)
+            range_tool_x_ranges[sk] = Range1d(start=start, end=end, bounds=(b_lo, b_hi))
+        else:
+            range_tool_x_ranges[sk] = Range1d(start=rt["start"], end=rt["end"])
 
     # Pre-populate flat sources for any source_key referenced by filtered specs,
     # so that build_filter_objects can find them in the cache.

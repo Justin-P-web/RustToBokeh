@@ -3,7 +3,7 @@
 
 use polars::prelude::DataFrame;
 
-use crate::charts::{FilterConfig, FilterSpec};
+use crate::charts::{AxisConfig, FilterConfig, FilterSpec};
 use crate::error::ChartError;
 
 use super::super::charts::add_renderers;
@@ -12,7 +12,7 @@ use super::super::figure::{
 };
 use super::super::id_gen::IdGen;
 use super::super::model::{BokehObject, BokehValue};
-use super::super::source::build_column_data_source;
+use super::super::source::{build_column_data_source, get_f64_column};
 use super::FilterOutput;
 
 pub(super) fn build_range_tool(
@@ -69,9 +69,18 @@ pub(super) fn build_range_tool(
         ]))
         .attr("code", BokehValue::Str(range_cb_code));
 
+    // Data-derived bounds + small buffer so panning/zoom can't escape data.
+    let (bounds_lo, bounds_hi) = compute_bounds(df, &filter.column);
+    let clamped_start = start.max(bounds_lo).min(bounds_hi);
+    let clamped_end = end.max(bounds_lo).min(bounds_hi);
+
     let range_widget = BokehObject::new("Range1d", range_id.clone())
-        .attr("start", BokehValue::Float(start))
-        .attr("end", BokehValue::Float(end))
+        .attr("start", BokehValue::Float(clamped_start))
+        .attr("end", BokehValue::Float(clamped_end))
+        .attr("bounds", BokehValue::Array(vec![
+            BokehValue::Float(bounds_lo),
+            BokehValue::Float(bounds_hi),
+        ]))
         .attr("js_property_callbacks", BokehValue::Map(vec![
             ("change:start".into(), BokehValue::Array(vec![start_cb.into_value()])),
             ("change:end".into(), BokehValue::Array(vec![end_cb.into_value()])),
@@ -83,6 +92,16 @@ pub(super) fn build_range_tool(
 
     let cds = build_column_data_source(id_gen, df);
 
+    // Bound the overview chart's own x and y axes to the data extent (+ buffer)
+    // so the user can't pan/zoom the navigator past the data either.
+    let overview_x_cfg = AxisConfig::builder()
+        .bounds(bounds_lo, bounds_hi)
+        .build();
+    let (y_bounds_lo, y_bounds_hi) = compute_bounds(df, &y_col);
+    let overview_y_cfg = AxisConfig::builder()
+        .bounds(y_bounds_lo, y_bounds_hi)
+        .build();
+
     let FigureOutput { mut figure, .. } = build_figure(
         id_gen,
         &filter.label,
@@ -90,8 +109,8 @@ pub(super) fn build_range_tool(
         None,
         XRangeKind::DataRange,
         YRangeKind::DataRange,
-        AxisBuilder::x(x_axis_type),
-        AxisBuilder::y(AxisType::Linear),
+        AxisBuilder::x(x_axis_type).config(Some(&overview_x_cfg)),
+        AxisBuilder::y(AxisType::Linear).config(Some(&overview_y_cfg)),
         None,
     );
 
@@ -145,6 +164,29 @@ pub(super) fn build_range_tool(
         range_tool_range_id: Some(range_id),
         range_tool_overview: Some(figure),
     })
+}
+
+/// Min/max of x-column with 5% buffer on each side. Buffer keeps the draggable
+/// window from snapping flush against data edges. Falls back to [start-1, end+1]
+/// equivalents if the column has no finite values.
+fn compute_bounds(df: &DataFrame, col: &str) -> (f64, f64) {
+    let Ok(vals) = get_f64_column(df, col) else {
+        return (f64::NEG_INFINITY, f64::INFINITY);
+    };
+    let mut lo = f64::INFINITY;
+    let mut hi = f64::NEG_INFINITY;
+    for v in vals {
+        if v.is_finite() {
+            if v < lo { lo = v; }
+            if v > hi { hi = v; }
+        }
+    }
+    if !lo.is_finite() || !hi.is_finite() {
+        return (f64::NEG_INFINITY, f64::INFINITY);
+    }
+    let span = hi - lo;
+    let buffer = if span > 0.0 { span * 0.05 } else { 1.0 };
+    (lo - buffer, hi + buffer)
 }
 
 fn build_range_tool_overlay(id_gen: &mut IdGen) -> BokehObject {

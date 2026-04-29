@@ -115,7 +115,7 @@ fn series_to_bokeh_array(series: &Column) -> BokehValue {
     BokehValue::Array(values)
 }
 
-/// Extract a column from a DataFrame as a Vec<f64>, returning an error if missing.
+/// Extract a column from a `DataFrame` as a `Vec<f64>`, returning an error if missing.
 pub fn get_f64_column(df: &DataFrame, col: &str) -> Result<Vec<f64>, String> {
     let series = df
         .column(col)
@@ -131,7 +131,7 @@ pub fn get_f64_column(df: &DataFrame, col: &str) -> Result<Vec<f64>, String> {
         .collect())
 }
 
-/// Extract a column from a DataFrame as a Vec<String>.
+/// Extract a column from a `DataFrame` as a `Vec<String>`.
 pub fn get_str_column(df: &DataFrame, col: &str) -> Result<Vec<String>, String> {
     let series = df
         .column(col)

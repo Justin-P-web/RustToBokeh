@@ -16,6 +16,7 @@ pub struct BokehDocument {
 }
 
 impl BokehDocument {
+    /// Create an empty document with a fresh UUID `doc_id` and no roots.
     pub fn new() -> Self {
         BokehDocument {
             doc_id: Uuid::new_v4().to_string(),

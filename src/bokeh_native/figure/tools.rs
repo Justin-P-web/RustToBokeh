@@ -33,6 +33,7 @@ fn build_wheel_zoom_tool(id_gen: &mut IdGen) -> BokehObject {
         .attr("renderers", BokehValue::Str("auto".into()))
 }
 
+/// Build a `BoxZoomTool` with an attached two-dimensional overlay annotation.
 pub fn build_box_zoom_tool(id_gen: &mut IdGen) -> BokehObject {
     let ann = build_box_annotation_inner(id_gen, false);
     BokehObject::new("BoxZoomTool", id_gen.next())
@@ -40,6 +41,8 @@ pub fn build_box_zoom_tool(id_gen: &mut IdGen) -> BokehObject {
         .attr("overlay", ann.into_value())
 }
 
+/// Build a `BoxSelectTool` with an attached selection-overlay annotation.
+/// The tool is wired to all auto-detected renderers on its parent figure.
 pub fn build_box_select_tool(id_gen: &mut IdGen) -> BokehObject {
     let ann = build_box_annotation_inner(id_gen, true);
     BokehObject::new("BoxSelectTool", id_gen.next())

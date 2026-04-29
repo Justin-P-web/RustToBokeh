@@ -209,6 +209,8 @@ fn build_grid(_grid_cols: usize, items: &[GridItem]) -> String {
     html
 }
 
+/// Escape `&`, `<`, `>`, and `"` for safe interpolation into HTML element
+/// content or double-quoted attribute values. Does not escape single quotes.
 pub fn escape_html(s: &str) -> String {
     s.replace('&', "&amp;")
         .replace('<', "&lt;")

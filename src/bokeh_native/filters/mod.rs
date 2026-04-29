@@ -5,10 +5,10 @@
 //! `js_property_callbacks` map so that chart `CDSView.filter` cross-references
 //! resolve correctly.
 //!
-//! Each filter variant lives in its own sub-module:
-//! [`range`], [`select`], [`group`], [`threshold`], [`top_n`], [`date_range`],
-//! [`range_tool`]. This file exposes the shared [`FilterOutput`] type and the
-//! public entry points [`build_filter_widgets`] and [`combine_filters`].
+//! Each filter variant lives in its own private sub-module: `range`,
+//! `select`, `group`, `threshold`, `top_n`, `date_range`, `range_tool`. This
+//! file exposes the shared [`FilterOutput`] type and the public entry points
+//! [`build_filter_widgets`] and [`combine_filters`].
 
 use std::collections::{HashMap, HashSet};
 use polars::prelude::DataFrame;

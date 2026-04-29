@@ -18,6 +18,12 @@ fn find_attr<'a>(obj: &'a BokehObject, key: &str) -> Option<&'a BokehValue> {
     obj.attributes.iter().find(|(k, _)| k == key).map(|(_, v)| v)
 }
 
+/// Build a scatter `Figure` from a [`ScatterConfig`] and the source frame.
+///
+/// `filter_ref` wires the chart into a page-level filter group when present.
+/// `range_tool_x_range_id` is the shared `Range1d` ID used for `RangeTool`
+/// linking when this scatter shares an X-range with another chart on the
+/// same page.
 pub fn build_scatter(
     id_gen: &mut IdGen,
     spec: &ChartSpec,

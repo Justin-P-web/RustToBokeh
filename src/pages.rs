@@ -1,7 +1,7 @@
 //! Page layout types for multi-page dashboards.
 //!
-//! A [`Page`] groups one or more [`PageModule`](crate::modules::PageModule)s
-//! and optional [`FilterSpec`](crate::charts::FilterSpec)s into a single HTML
+//! A [`Page`] groups one or more [`crate::modules::PageModule`]s
+//! and optional [`crate::charts::FilterSpec`]s into a single HTML
 //! file. Modules may be charts, paragraphs, or data tables — all positioned
 //! in a shared CSS grid. The dashboard renderer produces one HTML file per
 //! page and automatically generates a navigation bar linking all pages together.
@@ -131,7 +131,7 @@ impl PageBuilder {
 
     /// Add a chart to this page.
     ///
-    /// The spec is wrapped in [`PageModule::Chart`](crate::modules::PageModule::Chart).
+    /// The spec is wrapped in [`PageModule::Chart`].
     #[must_use] 
     pub fn chart(mut self, spec: ChartSpec) -> Self {
         self.modules.push(PageModule::Chart(spec));
@@ -140,7 +140,7 @@ impl PageBuilder {
 
     /// Add a paragraph text block to this page.
     ///
-    /// The spec is wrapped in [`PageModule::Paragraph`](crate::modules::PageModule::Paragraph).
+    /// The spec is wrapped in [`PageModule::Paragraph`].
     #[must_use] 
     pub fn paragraph(mut self, spec: ParagraphSpec) -> Self {
         self.modules.push(PageModule::Paragraph(spec));
@@ -149,9 +149,9 @@ impl PageBuilder {
 
     /// Add a formatted data table to this page.
     ///
-    /// The spec is wrapped in [`PageModule::Table`](crate::modules::PageModule::Table).
+    /// The spec is wrapped in [`PageModule::Table`].
     /// The table's `source_key` must reference a `DataFrame` registered with
-    /// [`Dashboard::add_df`](crate::Dashboard::add_df).
+    /// [`crate::Dashboard::add_df`].
     #[must_use]
     pub fn table(mut self, spec: TableSpec) -> Self {
         self.modules.push(PageModule::Table(spec));
@@ -160,7 +160,7 @@ impl PageBuilder {
 
     /// Add a row of compact stat tiles to this page (general-info header).
     ///
-    /// Wraps the spec in [`PageModule::StatGrid`](crate::modules::PageModule::StatGrid).
+    /// Wraps the spec in [`PageModule::StatGrid`].
     #[must_use]
     pub fn stat_grid(mut self, spec: StatGridSpec) -> Self {
         self.modules.push(PageModule::StatGrid(spec));

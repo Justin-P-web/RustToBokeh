@@ -13,6 +13,12 @@ use super::super::palette::resolve_palette;
 use super::super::source::build_column_data_source;
 use super::{add_legend, add_renderers, make_hover_tool, set_axis_labels};
 
+/// Build a multi-line `Figure` from a [`LineConfig`] and the source frame.
+///
+/// Each column listed in `cfg.y_cols` becomes one line glyph sharing the
+/// same `ColumnDataSource`. `filter_ref` wires the chart into a page-level
+/// filter group; `range_tool_x_range_id` is the shared `Range1d` ID used for
+/// `RangeTool` linking when present.
 pub fn build_line(
     id_gen: &mut IdGen,
     spec: &ChartSpec,

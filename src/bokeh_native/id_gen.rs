@@ -4,10 +4,14 @@
 pub struct IdGen(u32);
 
 impl IdGen {
+    /// Create a generator that will produce `"p1001"` on the first call to
+    /// [`next`](Self::next).
     pub fn new() -> Self {
         IdGen(1000)
     }
 
+    /// Increment the counter and return the next ID string (`"p1001"`,
+    /// `"p1002"`, …). Each call yields a new unique value.
     pub fn next(&mut self) -> String {
         self.0 += 1;
         format!("p{}", self.0)

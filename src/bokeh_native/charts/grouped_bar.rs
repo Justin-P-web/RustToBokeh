@@ -13,6 +13,11 @@ use super::super::palette::resolve_palette;
 use super::super::source::{build_cds_from_entries, get_f64_column, get_str_column};
 use super::{add_legend, add_renderers, make_hover_tool, set_axis_labels};
 
+/// Build a grouped vertical-bar `Figure` from a [`GroupedBarConfig`].
+///
+/// Bars are grouped by `cfg.x_col` with sub-groups distinguished by
+/// `cfg.group_col` and coloured via the configured palette. `filter_ref` is
+/// `Some` when this chart participates in a page-level filter group.
 pub fn build_grouped_bar(
     id_gen: &mut IdGen,
     spec: &ChartSpec,

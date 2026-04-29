@@ -12,10 +12,11 @@
 //! - [`axis`] / [`palette`] / [`source`] — axis, palette, `ColumnDataSource` helpers.
 //! - [`charts`] — per-chart-type renderers dispatched from `ChartConfig`.
 //! - [`filters`] — filter widget builders (RangeSlider, Select, Switch, …).
-//! - [`html`] / [`nav`] / [`modules_html`] — HTML templating helpers.
-//! - [`page`] — per-page assembly: wires charts + filters + modules into HTML.
-//! - [`placeholder`] — CDS-ID placeholder rewriting across filter widget
-//!   CustomJS args after real `ColumnDataSource` IDs are known.
+//! - [`html`] / [`nav`] — HTML templating helpers (private `modules_html`
+//!   handles paragraph/table/stat-grid markup).
+//! - Private `page` module assembles each page (charts + filters + modules)
+//!   into final HTML; `placeholder` rewrites CDS-ID placeholders across
+//!   filter widget CustomJS args once real `ColumnDataSource` IDs exist.
 //!
 //! ## Usage
 //!

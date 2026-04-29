@@ -1,9 +1,10 @@
 //! Chart configuration types, layout primitives, and filter definitions.
 //!
 //! This module contains everything needed to declaratively describe charts
-//! and filters in Rust. The types defined here are consumed by the Python
-//! renderer ([`crate::render::render_dashboard`]) to produce interactive Bokeh
-//! visualizations.
+//! and filters in Rust. The types defined here are consumed by both render
+//! paths — `bokeh_native::render_native_dashboard` and (with the `python`
+//! feature) the embedded `python/render.py` script — to produce interactive
+//! Bokeh visualizations.
 //!
 //! # Chart types
 //!
@@ -24,7 +25,7 @@
 //!
 //! Charts are positioned on a page grid using [`ChartSpecBuilder::at`], which
 //! sets the row, column, and column span. The grid dimensions are defined by
-//! [`PageBuilder::new`].
+//! [`crate::pages::PageBuilder::new`].
 //!
 //! # Filters
 //!

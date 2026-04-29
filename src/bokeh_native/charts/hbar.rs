@@ -12,6 +12,11 @@ use super::super::model::{BokehObject, BokehValue};
 use super::super::source::{build_column_data_source, get_str_column};
 use super::{add_renderers, make_hover_tool, set_axis_labels};
 
+/// Build a horizontal bar `Figure` from an [`HBarConfig`] and the source frame.
+///
+/// `filter_ref` may be a `CDSView`/filter reference if the chart participates
+/// in a page-level filter group; pass `None` for an unfiltered chart. Returns
+/// the assembled `Figure` `BokehObject` (not yet attached to a document).
 pub fn build_hbar(
     id_gen: &mut IdGen,
     spec: &ChartSpec,

@@ -143,7 +143,11 @@ pub fn build_summary_df(sensor_idx: usize, test_dfs: &[(String, DataFrame)]) -> 
             if spec.severity >= 0.0 { s.max - baseline } else { baseline - s.min }
         } else { 0.0 };
 
-        tests.push(spec.label.to_string());
+        tests.push(format!(
+            r#"<a href="test-{key}.html">{label}</a>"#,
+            key = spec.key,
+            label = spec.label,
+        ));
         colors.push(spec.color.to_string());
         means.push((s.mean * 100.0).round() / 100.0);
         stds.push((s.stddev * 100.0).round() / 100.0);

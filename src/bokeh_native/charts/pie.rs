@@ -14,6 +14,9 @@ use super::super::palette::resolve_palette;
 use super::super::source::{build_cds_from_entries, get_f64_column, get_str_column};
 use super::{add_legend_panel, add_renderers, make_hover_tool};
 
+/// Build a pie- or donut-chart `Figure` from a [`PieConfig`] and the source
+/// frame. The donut hole, palette, and label/value columns are all configured
+/// via `cfg`.
 pub fn build_pie(
     id_gen: &mut IdGen,
     spec: &ChartSpec,

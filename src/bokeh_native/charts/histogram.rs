@@ -12,6 +12,11 @@ use super::super::model::{BokehObject, BokehValue};
 use super::super::source::{build_cds_from_entries, build_column_data_source, get_f64_column};
 use super::{add_renderers, make_hover_tool, set_axis_labels};
 
+/// Build a histogram `Figure` from a [`HistogramConfig`] and a pre-computed
+/// histogram frame (with `left`/`right`/`count`/`pdf`/`cdf` columns).
+///
+/// The display style (count, PDF, or CDF) comes from `cfg.display`.
+/// `filter_ref` wires the chart into a page-level filter group when present.
 pub fn build_histogram(
     id_gen: &mut IdGen,
     spec: &ChartSpec,

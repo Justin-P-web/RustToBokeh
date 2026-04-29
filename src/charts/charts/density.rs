@@ -25,8 +25,7 @@ use crate::error::ChartError;
 /// - A categorical column (X axis grouping, set via `.category()`)
 /// - A numeric column (Y axis values, set via `.value()`)
 ///
-/// This is the same shape produced by
-/// [`build_salary_raw`](crate::build_salary_raw) and consumed by
+/// This is the same long-form shape consumed by
 /// [`compute_box_stats`](crate::compute_box_stats).
 ///
 /// # Example

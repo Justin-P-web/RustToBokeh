@@ -87,6 +87,7 @@ pub struct BubbleConfigBuilder {
 }
 
 impl BubbleConfig {
+    /// Create a new [`BubbleConfigBuilder`] with all fields unset.
     #[must_use]
     pub fn builder() -> BubbleConfigBuilder {
         BubbleConfigBuilder {
@@ -111,77 +112,105 @@ impl BubbleConfig {
 }
 
 impl BubbleConfigBuilder {
+    /// Set the X-axis value column name. **Required.**
     #[must_use]
     pub fn x(mut self, col: &str) -> Self {
         self.x_col = Some(col.into());
         self
     }
+    /// Set the Y-axis value column name. **Required.**
     #[must_use]
     pub fn y(mut self, col: &str) -> Self {
         self.y_col = Some(col.into());
         self
     }
+    /// Set the column whose numeric values drive marker size. **Required.**
+    ///
+    /// Values are mapped through a `sqrt` transform into the pixel range
+    /// configured by [`size_range`](Self::size_range) so perceived bubble area
+    /// scales linearly with the underlying value.
     #[must_use]
     pub fn size(mut self, col: &str) -> Self {
         self.size_col = Some(col.into());
         self
     }
+    /// Set the X-axis label text. **Required.**
     #[must_use]
     pub fn x_label(mut self, label: &str) -> Self {
         self.x_label = Some(label.into());
         self
     }
+    /// Set the Y-axis label text. **Required.**
     #[must_use]
     pub fn y_label(mut self, label: &str) -> Self {
         self.y_label = Some(label.into());
         self
     }
+    /// Drive per-bubble fill color from a categorical column.
+    ///
+    /// When set, [`palette`](Self::palette) controls the color mapping and a
+    /// legend is shown unless suppressed via [`show_legend`](Self::show_legend).
     #[must_use]
     pub fn color_by(mut self, col: &str) -> Self {
         self.color_col = Some(col.into());
         self
     }
+    /// Set the palette used when [`color_by`](Self::color_by) is set.
     #[must_use]
     pub fn palette(mut self, palette: PaletteSpec) -> Self {
         self.palette = Some(palette);
         self
     }
+    /// Set the fallback fill color used when [`color_by`](Self::color_by) is
+    /// not set. Accepts any Bokeh-compatible CSS color string.
     #[must_use]
     pub fn color(mut self, color: &str) -> Self {
         self.color = Some(color.into());
         self
     }
+    /// Set the marker shape. Defaults to [`MarkerType::Circle`].
     #[must_use]
     pub fn marker(mut self, marker: MarkerType) -> Self {
         self.marker = Some(marker);
         self
     }
+    /// Set the minimum and maximum marker radii in screen pixels.
+    ///
+    /// Defaults to `8.0..40.0`. Both bounds are applied after the `sqrt`
+    /// transform on the size column.
     #[must_use]
     pub fn size_range(mut self, min: f64, max: f64) -> Self {
         self.size_min = Some(min);
         self.size_max = Some(max);
         self
     }
+    /// Set the fill alpha. `0.0` = transparent, `1.0` = opaque. Defaults to
+    /// `0.6` so overlapping bubbles remain readable.
     #[must_use]
     pub fn alpha(mut self, alpha: f64) -> Self {
         self.alpha = Some(alpha);
         self
     }
+    /// Replace the default hover tooltip (x / y / size / color columns).
     #[must_use]
     pub fn tooltips(mut self, tooltips: TooltipSpec) -> Self {
         self.tooltips = Some(tooltips);
         self
     }
+    /// Configure the X-axis appearance (formatter, tick density, …).
     #[must_use]
     pub fn x_axis(mut self, axis: AxisConfig) -> Self {
         self.x_axis = Some(axis);
         self
     }
+    /// Configure the Y-axis appearance.
     #[must_use]
     pub fn y_axis(mut self, axis: AxisConfig) -> Self {
         self.y_axis = Some(axis);
         self
     }
+    /// Toggle the legend rendered when [`color_by`](Self::color_by) is set.
+    /// Defaults to `true`.
     #[must_use]
     pub fn show_legend(mut self, show: bool) -> Self {
         self.show_legend = Some(show);

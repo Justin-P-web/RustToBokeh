@@ -1,9 +1,9 @@
 //! Figure builder — creates Bokeh Figure models with axes, grids, and toolbar.
 //!
-//! Sub-modules:
-//! - [`ranges`] — `Range1d`/`FactorRange`/`DataRange1d` builders for x/y axes.
-//! - [`tools`] — toolbar tool builders (pan, wheel zoom, box zoom, hover, …).
-//! - [`glyph`] — `GlyphRenderer` + `CDSView` helper.
+//! Private sub-modules:
+//! - `ranges` — `Range1d`/`FactorRange`/`DataRange1d` builders for x/y axes.
+//! - `tools` — toolbar tool builders (pan, wheel zoom, box zoom, hover, …).
+//! - `glyph` — `GlyphRenderer` + `CDSView` helper.
 
 pub use super::axis::{AxisBuilder, AxisType};
 

@@ -63,7 +63,7 @@ pub enum FilterConfig {
     /// A compact overview chart (height 130 px, no toolbar) is automatically
     /// generated and placed below the page grid. It renders `y_column` over
     /// the full x extent and attaches a draggable `RangeTool` overlay that
-    /// updates the shared [`Range1d`] used by the detail charts.
+    /// updates the shared `Range1d` used by the detail charts.
     ///
     /// Unlike the other filter variants, `RangeTool` does not produce a
     /// `CDSView` — it only adjusts the visible x-axis window. Charts do not
@@ -92,8 +92,8 @@ pub enum FilterConfig {
 /// Each `FilterSpec` targets a specific data source and column, producing a
 /// Bokeh widget with a `CustomJS` callback that updates the filter in real
 /// time. Charts on the same page that share the filter's `source_key` and
-/// have been marked as [`filtered`](ChartSpecBuilder::filtered) will respond
-/// to changes.
+/// have been marked as [`filtered`](crate::charts::ChartSpecBuilder::filtered)
+/// will respond to changes.
 ///
 /// Use the factory methods ([`range`](FilterSpec::range),
 /// [`select`](FilterSpec::select), [`group`](FilterSpec::group),

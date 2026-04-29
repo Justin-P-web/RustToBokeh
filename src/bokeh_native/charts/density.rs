@@ -17,6 +17,11 @@ use super::{add_renderers, set_axis_labels};
 const KDE_GRID_POINTS: usize = 80;
 const VIOLIN_W: f64 = 0.4;
 
+/// Build a density (sina/violin) `Figure` from a [`DensityConfig`].
+///
+/// The kernel density estimate runs in pure Rust on a fixed
+/// `KDE_GRID_POINTS` grid. `filter_ref` is `Some` when this chart participates
+/// in a page-level filter group.
 pub fn build_density(
     id_gen: &mut IdGen,
     spec: &ChartSpec,

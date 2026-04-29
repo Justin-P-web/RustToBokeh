@@ -21,13 +21,20 @@ use serde::{Serialize, Serializer};
 /// A value that can appear in a Bokeh model's attributes.
 #[derive(Clone)]
 pub enum BokehValue {
+    /// JSON `null`.
     Null,
+    /// JSON boolean.
     Bool(bool),
+    /// 64-bit signed integer.
     Int(i64),
+    /// 64-bit float. Use [`BokehValue::number`] when the source value may be
+    /// `NaN`.
     Float(f64),
     /// Special NaN → `{"type":"number","value":"nan"}`
     NaN,
+    /// JSON string.
     Str(String),
+    /// JSON array of values.
     Array(Vec<BokehValue>),
     /// `{"type":"map","entries":[[k,v],...]}`
     Map(Vec<(String, BokehValue)>),
@@ -44,26 +51,39 @@ pub enum BokehValue {
 }
 
 impl BokehValue {
+    /// Construct a string value (`BokehValue::Str`).
     pub fn str(s: impl Into<String>) -> Self {
         BokehValue::Str(s.into())
     }
 
+    /// Construct a column-field reference (`{"type":"field","field":"col"}`).
+    /// Use this when a glyph property reads from a `ColumnDataSource` column
+    /// rather than a fixed value.
     pub fn field(col: impl Into<String>) -> Self {
         BokehValue::Field(col.into())
     }
 
+    /// Wrap a value as `{"type":"value","value":v}` — the explicit form Bokeh
+    /// expects when distinguishing fixed values from field references.
     pub fn value_of(v: BokehValue) -> Self {
         BokehValue::Value(Box::new(v))
     }
 
+    /// Wrap a [`BokehObject`] inline as a value (`BokehValue::Object`).
     pub fn obj(o: BokehObject) -> Self {
         BokehValue::Object(Box::new(o))
     }
 
+    /// Construct a cross-reference (`{"id":"p1001"}`) to another model that
+    /// is defined elsewhere in the document.
     pub fn ref_of(id: impl Into<String>) -> Self {
         BokehValue::Ref(id.into())
     }
 
+    /// Construct a field reference with a transform applied
+    /// (`{"type":"field","field":"col","transform":{...}}`). `transform` must
+    /// serialize to a Bokeh transform model such as `LinearColorMapper` or
+    /// `CustomJSTransform`.
     pub fn field_transform(field: impl Into<String>, transform: BokehValue) -> Self {
         BokehValue::FieldTransform {
             field: field.into(),
@@ -160,10 +180,15 @@ pub struct BokehObject {
 }
 
 impl BokehObject {
+    /// Create a Bokeh model object with a type `name` and unique `id` and no
+    /// attributes. Chain [`attr`](Self::attr) to add attributes.
     pub fn new(name: &'static str, id: String) -> Self {
         BokehObject { name, id, attributes: Vec::new() }
     }
 
+    /// Create a Bokeh model object with attributes provided up front. Equivalent
+    /// to [`new`](Self::new) followed by repeated [`attr`](Self::attr) calls,
+    /// but cheaper when many attributes are already known.
     pub fn with_attrs(
         name: &'static str,
         id: String,

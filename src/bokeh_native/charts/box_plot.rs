@@ -16,6 +16,11 @@ use super::{add_renderers, make_hover_tool, set_axis_labels};
 const CAP_HW: f64 = 0.3;
 const BOX_W: f64 = 0.6;
 
+/// Build a box-plot `Figure` from a [`BoxPlotConfig`] and the source frame.
+///
+/// `outlier_df` provides the optional outlier-point overlay; pass `None` to
+/// suppress outlier markers. `filter_ref` wires the chart into a page-level
+/// filter group when present.
 pub fn build_box_plot(
     id_gen: &mut IdGen,
     spec: &ChartSpec,

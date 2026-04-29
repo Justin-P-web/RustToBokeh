@@ -2,13 +2,13 @@
 //!
 //! A [`PageModule`] is a single content block on a dashboard page. Pages may
 //! contain any mix of charts, paragraphs, and data tables, each positioned in
-//! the CSS grid via a [`GridCell`](crate::charts::GridCell).
+//! the CSS grid via a [`GridCell`].
 //!
 //! # Module types
 //!
 //! | Type | Description |
 //! |---|---|
-//! | [`PageModule::Chart`] | Interactive Bokeh chart (wraps [`ChartSpec`](crate::charts::ChartSpec)) |
+//! | [`PageModule::Chart`] | Interactive Bokeh chart (wraps [`ChartSpec`]) |
 //! | [`PageModule::Paragraph`] | Styled text block with optional heading |
 //! | [`PageModule::Table`] | Formatted data table rendered from a registered DataFrame |
 
@@ -20,8 +20,8 @@ use crate::handle::DfHandle;
 /// A single content module on a dashboard page.
 ///
 /// Pages may mix any combination of module types in their grid layout.
-/// Each module specifies its own grid position via the [`GridCell`](crate::charts::GridCell)
-/// embedded in the inner spec.
+/// Each module specifies its own grid position via the [`GridCell`] embedded
+/// in the inner spec.
 ///
 /// Construct pages using [`PageBuilder`](crate::pages::PageBuilder), which
 /// provides `.chart()`, `.paragraph()`, and `.table()` methods that

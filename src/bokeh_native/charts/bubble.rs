@@ -20,6 +20,11 @@ use super::{add_legend, add_renderers, make_hover_tool, set_axis_labels};
 const SIZE_COL: &str = "_bubble_size";
 const COLOR_COL: &str = "_bubble_color";
 
+/// Build a bubble-plot `Figure` from a [`BubbleConfig`] and the source frame.
+///
+/// Marker sizes are computed from `cfg.size_col` and clamped to the
+/// configured `size_min`/`size_max` pixel range. `filter_ref` is `Some` when
+/// the chart participates in a page-level filter group.
 pub fn build_bubble(
     id_gen: &mut IdGen,
     spec: &ChartSpec,

@@ -183,9 +183,9 @@ impl ChartSpecBuilder {
 
     /// Mark this chart as filtered, opting it into `CDSView`-based filtering.
     ///
-    /// Only charts with the same `source_key` as a page's [`FilterSpec`]s
-    /// will be affected. Charts that are not marked as filtered will display
-    /// all data regardless of filter state.
+    /// Only charts with the same `source_key` as a page's
+    /// [`crate::charts::FilterSpec`]s will be affected. Charts that are not
+    /// marked as filtered will display all data regardless of filter state.
     #[must_use]
     pub fn filtered(mut self) -> Self {
         self.filtered = true;

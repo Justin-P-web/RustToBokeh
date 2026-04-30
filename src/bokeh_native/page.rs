@@ -27,6 +27,7 @@ pub(super) fn render_page(
     report_title: &str,
     nav_style_str: &str,
     bokeh_resources_html: &str,
+    report_typst: &str,
 ) -> Result<String, ChartError> {
     let mut id_gen = IdGen::new();
     let mut doc = BokehDocument::new();
@@ -303,6 +304,7 @@ pub(super) fn render_page(
         filter_widgets: filter_widget_items,
         range_tool_overviews: range_overview_divs,
         hidden_divs,
+        report_typst,
     };
 
     Ok(render_page_html(&page_data))

@@ -73,6 +73,12 @@ pub enum BokehResources {
 ///
 /// `frame_data` is a list of `(key, Arrow-IPC-bytes)` pairs as produced by
 /// [`crate::serialize_df`]. `pages` is the page list from the Dashboard.
+///
+/// In addition to the per-page HTML files, this also writes a single
+/// `report.typ` file at `output_dir` lowering the same pages, modules, and
+/// charts to a Typst source document. The export button on each generated
+/// HTML page downloads the same content client-side. Run
+/// `typst compile report.typ` afterward to produce a printable PDF.
 pub fn render_native_dashboard(
     frame_data: &[(&str, Vec<u8>)],
     pages: &[Page],
@@ -91,6 +97,11 @@ pub fn render_native_dashboard(
 
     std::fs::create_dir_all(output_dir)
         .map_err(|e| ChartError::NativeRender(format!("create_dir_all '{}': {}", output_dir, e)))?;
+
+    let report_typst = crate::typst_export::build_typst_report(pages, &frames, report_title);
+    let typst_path = format!("{}/report.typ", output_dir);
+    std::fs::write(&typst_path, &report_typst)
+        .map_err(|e| ChartError::NativeRender(format!("write '{}': {}", typst_path, e)))?;
 
     let bokeh_resources_html = match resources {
         BokehResources::Cdn => html::bokeh_cdn_resources(),
@@ -121,6 +132,7 @@ pub fn render_native_dashboard(
             report_title,
             nav_style_str,
             &bokeh_resources_html,
+            &report_typst,
         )?;
 
         let path = format!("{}/{}.html", output_dir, page.slug);

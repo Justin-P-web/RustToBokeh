@@ -352,10 +352,29 @@ pub const INLINE_CSS: &str = r#"<style>
         h1 {
             font-family: var(--ff-body);
             font-size: var(--fs-xl); font-weight: 600;
-            color: var(--c-fg); margin: 0 0 var(--s-3);
-            padding-bottom: var(--s-3); border-bottom: 1px solid var(--c-border);
+            color: var(--c-fg); margin: 0;
             letter-spacing: -0.005em;
         }
+        .page-header-bar {
+            display: flex; align-items: flex-end; justify-content: space-between;
+            gap: var(--s-4); margin: 0 0 var(--s-3);
+            padding-bottom: var(--s-3); border-bottom: 1px solid var(--c-border);
+        }
+        .export-btn {
+            display: inline-flex; align-items: center; gap: var(--s-2);
+            font-family: var(--ff-mono); font-size: var(--fs-xs);
+            text-transform: uppercase; letter-spacing: 0.08em;
+            color: var(--c-fg-dim); background: var(--c-surface);
+            border: 1px solid var(--c-border); border-radius: var(--r-sm);
+            padding: var(--s-2) var(--s-3); cursor: pointer; flex-shrink: 0;
+            transition: color 0.1s, background 0.1s, border-color 0.1s;
+        }
+        .export-btn:hover {
+            color: var(--c-fg); background: var(--c-surface-2);
+            border-color: var(--c-accent);
+        }
+        .export-btn:active { background: var(--c-accent-soft); }
+        .export-btn-icon { font-size: var(--fs-sm); line-height: 1; }
         .subtitle {
             font-family: var(--ff-mono); font-size: var(--fs-xs);
             text-transform: uppercase; letter-spacing: 0.1em;
@@ -685,6 +704,41 @@ pub const THEME_HEAD_SCRIPT: &str = r#"<script>
     } catch(e){}
     if (t) document.documentElement.setAttribute('data-theme', t);
     if (m && m !== 'auto') document.documentElement.setAttribute('data-mode', m);
+})();
+</script>"#;
+
+// ── Export button (top-right of every page header) ───────────────────────────
+
+/// Inline HTML for the export button rendered at the top-right of each page's
+/// content header. The button triggers [`EXPORT_SCRIPT`], which downloads the
+/// `report.typ` source previously embedded as `window.__rtb_report_typst`.
+pub const EXPORT_BUTTON_HTML: &str = r#"<button class="export-btn" id="export-typst-btn" type="button" aria-label="Export report as Typst source">
+                <span class="export-btn-icon">⬇</span><span>Export .typ</span>
+            </button>"#;
+
+/// JS handler for the export button. Reads the inline Typst source from
+/// `window.__rtb_report_typst`, builds a Blob, and triggers a download of
+/// `report.typ`. Compile to PDF afterward with `typst compile report.typ`.
+pub const EXPORT_SCRIPT: &str = r#"<script>
+(function () {
+    var btn = document.getElementById('export-typst-btn');
+    if (!btn) return;
+    btn.addEventListener('click', function () {
+        var src = window.__rtb_report_typst || '';
+        if (!src) {
+            alert('No Typst source available for this report.');
+            return;
+        }
+        var blob = new Blob([src], { type: 'text/plain;charset=utf-8' });
+        var url = URL.createObjectURL(blob);
+        var a = document.createElement('a');
+        a.href = url;
+        a.download = 'report.typ';
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        setTimeout(function () { URL.revokeObjectURL(url); }, 0);
+    });
 })();
 </script>"#;
 

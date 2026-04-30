@@ -64,6 +64,7 @@ pub mod modules;
 pub mod pages;
 pub mod prelude;
 pub mod stats;
+pub mod typst_export;
 pub mod validator;
 #[cfg(feature = "python")]
 mod python_config;

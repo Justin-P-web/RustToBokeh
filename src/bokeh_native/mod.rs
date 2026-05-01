@@ -98,10 +98,13 @@ pub fn render_native_dashboard(
     std::fs::create_dir_all(output_dir)
         .map_err(|e| ChartError::NativeRender(format!("create_dir_all '{}': {}", output_dir, e)))?;
 
-    let report_typst = crate::typst_export::build_typst_report(pages, &frames, report_title);
-    let typst_path = format!("{}/report.typ", output_dir);
-    std::fs::write(&typst_path, &report_typst)
-        .map_err(|e| ChartError::NativeRender(format!("write '{}': {}", typst_path, e)))?;
+    let report = crate::typst_export::build_typst_report(pages, &frames, report_title);
+    report
+        .write_to(std::path::Path::new(output_dir))
+        .map_err(|e| {
+            ChartError::NativeRender(format!("write typst report under '{}': {}", output_dir, e))
+        })?;
+    let report_typst_inline = report.source_inlined();
 
     let bokeh_resources_html = match resources {
         BokehResources::Cdn => html::bokeh_cdn_resources(),
@@ -132,7 +135,7 @@ pub fn render_native_dashboard(
             report_title,
             nav_style_str,
             &bokeh_resources_html,
-            &report_typst,
+            &report_typst_inline,
         )?;
 
         let path = format!("{}/{}.html", output_dir, page.slug);
